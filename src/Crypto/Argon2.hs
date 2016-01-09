@@ -1,27 +1,84 @@
+{-# LANGUAGE DeriveDataTypeable #-}
+{-# LANGUAGE DeriveGeneric #-}
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Crypto.Argon2 (hashEncoded, hash, HashOptions(..), Argon2Variant(..), defaultHashOptions) where
+{-|
 
+"Crypto.Argon2" provides bindings to the
+<https://github.com/P-H-C/phc-winner-argon2 reference implementation> of Argon2,
+the password-hashing function that won the
+<https://password-hashing.net/ Password Hashing Competition (PHC)>. 
+
+The main entry points to this module are 'hashEncoded', which produces a
+crypt-like ASCII output; and 'hash' which produces a 'BS.ByteString' (a stream
+of bytes). Argon2 is a configurable hash function, and can be configured by
+supplying a particular set of 'HashOptions' - 'defaultHashOptions' should provide
+a good starting point. See 'HashOptions' for more documentation on the particular
+parameters that can be adjusted.
+
+For access directly to the C interface, see "Crypto.Argon2.FFI".
+
+-}
+module Crypto.Argon2
+       ( -- * Computing hashes
+         hashEncoded, hash,
+         -- * Configuring hashing
+         HashOptions(..), Argon2Variant(..), defaultHashOptions,
+         -- * Exceptions
+         Argon2Exception(..))
+       where
+
+import GHC.Generics (Generic)
 import Control.Exception
 import Data.Typeable
 import Foreign
 import Foreign.C
 import Numeric.Natural
 import System.IO.Unsafe (unsafePerformIO)
-import qualified Data.ByteString as BS
-import qualified Data.Text.Encoding as T
-import qualified Data.Text as T
 import qualified Crypto.Argon2.FFI as FFI
+import qualified Data.ByteString as BS
+import qualified Data.Text as T
+import qualified Data.Text.Encoding as T
 
-data Argon2Variant = Argon2i | Argon2d
+-- | Which variant of Argon2 to use. You should choose the variant that is most
+-- applicable to your intention to hash inputs.
+data Argon2Variant
+  = Argon2i  -- ^ Argon2i uses data-independent memory access, which is preferred
+             -- for password hashing and password-based key derivation. Argon2i
+             -- is slower as it makes more passes over the memory to protect from
+             -- tradeoff attacks.
+  | Argon2d -- ^ Argon2d is faster and uses data-depending memory access, which
+            -- makes it suitable for cryptocurrencies and applications with no
+            -- threats from side-channel timing attacks.
+  deriving (Eq,Ord,Read,Show,Bounded,Generic,Typeable)
 
+-- | Parameters that can be adjusted to change the runtime performance of the
+-- hashing.
 data HashOptions =
-  HashOptions {hashIterations :: !Word32
-              ,hashMemory :: !Word32
-              ,hashParallelism :: !Word32
-              ,hashVariant :: !Argon2Variant}
+  HashOptions {hashIterations :: !Word32 -- ^ The time cost, which defines the amount of computation realized and therefore the execution time, given in number of iterations.
+                                         --
+                                         -- 'FFI.ARGON2_MIN_TIME' <= 'hashIterations' <= 'FFI.ARGON2_MAX_TIME'
+              ,hashMemory :: !Word32 -- ^ The memory cost, which defines the memory usage, given in kibibytes.
+                                     --
+                                     -- max 'FFI.ARGON2_MIN_MEMORY' (8 * 'hashParallelism') <= 'hashMemory' <= 'FFI.ARGON2_MAX_MEMORY'
+              ,hashParallelism :: !Word32 -- ^ A parallelism degree, which defines the number of parallel threads.
+                                          --
+                                          -- 'FFI.ARGON2_MIN_LANES' <= 'hashParallelism' <= 'FFI.ARGON2_MAX_LANES' && 'FFI.ARGON_MIN_THREADS' <= 'hashParallelism' <= 'FFI.ARGON2_MAX_THREADS'
+              ,hashVariant :: !Argon2Variant -- ^ Which version of Argon2 to use.
+              }
+  deriving (Eq,Ord,Read,Show,Bounded,Generic,Typeable)
 
+-- | A set of default 'HashOptions', taken from the @argon2@ executable.
+--
+-- @
+-- 'defaultHashOptions' :: 'HashOptions'
+-- 'defaultHashOptions' =
+--   'HashOptions' {'hashIterations' = 3
+--               ,'hashMemory' = 2 ^ 12
+--               ,'hashParallelism' = 1
+--               ,'hashVariant' = 'Argon2i'}
+-- @
 defaultHashOptions :: HashOptions
 defaultHashOptions =
   HashOptions {hashIterations = 3
@@ -29,18 +86,22 @@ defaultHashOptions =
               ,hashParallelism = 1
               ,hashVariant = Argon2i}
 
-hashEncoded :: HashOptions -- ^ Options pertaining to how expensive the hash is to calculate
-            -> BS.ByteString -- ^ The password to hash
-            -> BS.ByteString -- ^ The salt to use when hashing
-            -> T.Text -- ^ The encoded password hash
+-- | Encode a password with a given salt and 'HashOptions' and produce a textual
+-- encoding of the result.
+hashEncoded :: HashOptions -- ^ Options pertaining to how expensive the hash is to calculate.
+            -> BS.ByteString -- ^ The password to hash. Must be less than 4294967295 bytes.
+            -> BS.ByteString -- ^ The salt to use when hashing. Must be less than 4294967295 bytes.
+            -> T.Text -- ^ The encoded password hash.
 hashEncoded options password salt =
   unsafePerformIO (hash' options password salt FFI.argon2i_hash_encoded FFI.argon2d_hash_encoded asText)
   where asText = fmap T.decodeUtf8 . BS.packCString
 
-hash :: HashOptions -- ^ Options pertaining to how expensive the hash is to calculate
-     -> BS.ByteString -- ^ The password to hash
-     -> BS.ByteString -- ^ The salt to use when hashing
-     -> BS.ByteString -- ^ The un-encoded password hash
+-- | Encode a password with a given salt and 'HashOptions' and produce a stream
+-- of bytes.
+hash :: HashOptions -- ^ Options pertaining to how expensive the hash is to calculate.
+     -> BS.ByteString -- ^ The password to hash. Must be less than 4294967295 bytes.
+     -> BS.ByteString -- ^ The salt to use when hashing. Must be less than 4294967295 bytes.
+     -> BS.ByteString -- ^ The un-encoded password hash.
 hash options password salt =
   unsafePerformIO (hash' options password salt FFI.argon2i_hash_encoded FFI.argon2d_hash_encoded BS.packCString)
 
@@ -51,13 +112,22 @@ variant _ b Argon2d = b
 
 type Argon2 a = Word32 -> Word32 -> Word32 -> CString -> Word64 -> CString -> Word64 -> Word64 -> a -> Word64 -> IO Int32
 
+-- | Not all 'HashOptions' can necessarily be used to compute hashes. If you
+-- supply invalid 'HashOptions' (or hashing otherwise fails) a 'Argon2Exception'
+-- will be throw.
 data Argon2Exception
-  = Argon2PasswordLengthOutOfRange Word64 Word64 Word64
-  | Argon2SaltLengthOutOfRange Word64 Word64 Word64
-  | Argon2MemoryUseOutOfRange Word32 Word32 Word32
-  | Argon2IterationCountOutOfRange Word32 Word32 Word32
-  | Argon2ParallelismOutOfRange Word32 Word32 Word32
-  | Argon2Exception Int32
+  = -- | The length of the supplied password is outside the range supported by @libargon2@.
+    Argon2PasswordLengthOutOfRange !Word64 -- ^ The erroneous length.
+  | -- | The length of the supplied salt is outside the range supported by @libargon2@.
+    Argon2SaltLengthOutOfRange !Word64 -- ^ The erroneous length.
+  | -- | Either too much or too little memory was requested via 'hashMemory'.
+    Argon2MemoryUseOutOfRange !Word32 -- ^ The erroneous 'hashMemory' value.
+  | -- | Either too few or too many iterations were requested via 'hashIterations'.
+    Argon2IterationCountOutOfRange !Word32 -- ^ The erroneous 'hashIterations' value.
+  | -- | Either too much or too little parallelism was requested via 'hasParallelism'.
+    Argon2ParallelismOutOfRange !Word32 -- ^ The erroneous 'hashParallelism' value.
+  | -- | An unexpected exception was throw. Please <https://github.com/ocharles/argon2/issues report this as a bug>!
+    Argon2Exception !Int32 -- ^ The =libargon2= error code.
   deriving (Typeable, Show)
 
 instance Exception Argon2Exception
@@ -92,25 +162,18 @@ hash' HashOptions{..} password salt argon2i argon2d postProcess =
        a
          | a `elem` [FFI.ARGON2_OK] -> postProcess out
          | a `elem` [FFI.ARGON2_SALT_TOO_SHORT,FFI.ARGON2_SALT_TOO_LONG] ->
-           throwIO (Argon2SaltLengthOutOfRange saltLen
-                                               FFI.ARGON2_MIN_SALT_LENGTH
-                                               FFI.ARGON2_MAX_SALT_LENGTH)
+           throwIO (Argon2SaltLengthOutOfRange saltLen)
          | a `elem` [FFI.ARGON2_PWD_TOO_SHORT,FFI.ARGON2_PWD_TOO_LONG] ->
-           throwIO (Argon2PasswordLengthOutOfRange passwordLen
-                                                   FFI.ARGON2_MIN_PWD_LENGTH
-                                                   FFI.ARGON2_MAX_PWD_LENGTH)
+           throwIO (Argon2PasswordLengthOutOfRange passwordLen)
          | a `elem` [FFI.ARGON2_TIME_TOO_SMALL,FFI.ARGON2_TIME_TOO_LARGE] ->
-           throwIO (Argon2IterationCountOutOfRange hashIterations
-                                                   FFI.ARGON2_MIN_TIME
-                                                   FFI.ARGON2_MAX_TIME)
+           throwIO (Argon2IterationCountOutOfRange hashIterations)
          | a `elem` [FFI.ARGON2_MEMORY_TOO_LITTLE,FFI.ARGON2_MEMORY_TOO_MUCH] ->
-           throwIO (Argon2MemoryUseOutOfRange
-                      hashMemory
-                      (max FFI.ARGON2_MIN_MEMORY (8 * hashParallelism))
-                      FFI.ARGON2_MAX_MEMORY)
-         | a `elem` [FFI.ARGON2_LANES_TOO_FEW,FFI.ARGON2_LANES_TOO_MANY] ->
-           throwIO (Argon2ParallelismOutOfRange hashParallelism
-                                                FFI.ARGON2_MIN_LANES
-                                                FFI.ARGON2_MAX_LANES)
+           throwIO (Argon2MemoryUseOutOfRange hashMemory)
+         | a `elem`
+             [FFI.ARGON2_LANES_TOO_FEW
+             ,FFI.ARGON2_LANES_TOO_MANY
+             ,FFI.ARGON2_THREADS_TOO_FEW
+             ,FFI.ARGON2_THREADS_TOO_MANY] ->
+           throwIO (Argon2ParallelismOutOfRange hashParallelism)
          | otherwise -> throwIO (Argon2Exception a)
   where argon2 = variant argon2i argon2d hashVariant
