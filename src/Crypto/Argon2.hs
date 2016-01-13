@@ -1,7 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Crypto.Argon2 (hashEncoded, hash, HashOptions(..), Argon2Variant(..), defaultHashOptions) where
+module Crypto.Argon2 (hashEncoded, hash, verifyEncoded, HashOptions(..), Argon2Variant(..), defaultHashOptions) where
 
 import Control.Exception
 import Data.Typeable
@@ -114,3 +114,24 @@ hash' HashOptions{..} password salt argon2i argon2d postProcess =
                                                 FFI.ARGON2_MAX_LANES)
          | otherwise -> throwIO (Argon2Exception a)
   where argon2 = variant argon2i argon2d hashVariant
+
+
+type Argon2Verify  = CString -> CString -> Word64 -> IO Int32
+
+verifyEncoded :: HashOptions    -- ^ Options pertaining to how expensive the hash is to calculate
+              -> T.Text         -- ^ The encodedArgonHash
+              -> BS.ByteString  -- ^ The password to hash
+              -> Bool
+verifyEncoded HashOptions{..} encodedArgonHash password =
+  unsafePerformIO $ do
+    res <- BS.useAsCString password $
+        \password' ->
+          BS.useAsCString (T.encodeUtf8 encodedArgonHash) $
+          \encodedArgonHash' ->
+            argon2 encodedArgonHash' password' passwordLen
+    case res of
+        FFI.ARGON2_OK -> return True
+        _             -> return False
+  where
+    argon2 = variant FFI.argon2i_verify FFI.argon2d_verify hashVariant
+    passwordLen = fromIntegral (BS.length password)
