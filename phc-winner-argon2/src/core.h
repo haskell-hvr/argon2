@@ -24,6 +24,8 @@
 #define ALIGN(x)
 #endif
 
+#define CONST_CAST(x) (x)(uintptr_t)
+
 /*************************Argon2 internal
  * constants**************************************************/
 
@@ -212,7 +214,8 @@ void fill_segment(const argon2_instance_t *instance,
  * Function that fills the entire memory t_cost times based on the first two
  * blocks in each lane
  * @param instance Pointer to the current instance
+ * @return ARGON2_OK if successful, @context->state
  */
-void fill_memory_blocks(argon2_instance_t *instance);
+int fill_memory_blocks(argon2_instance_t *instance);
 
 #endif

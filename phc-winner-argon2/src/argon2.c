@@ -11,11 +11,9 @@
  * <http://creativecommons.org/publicdomain/zero/1.0/>.
  */
 
-#include <stdint.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
-#include <limits.h>
 
 #include "argon2.h"
 #include "encoding.h"
@@ -102,7 +100,9 @@ static const char *Argon2_ErrorMessage[] = {
     /*},
 {ARGON2_ENCODING_FAIL, */ "Encoding failed",
     /*},
-{ARGON2_DECODING_FAIL, */ "Decoding failed", /*},*/
+{ARGON2_DECODING_FAIL, */ "Decoding failed",
+    /*},
+{ARGON2_THREAD_FAIL */ "Threading failure", /*},*/
 };
 
 
@@ -151,8 +151,11 @@ int argon2_core(argon2_context *context, argon2_type type) {
     }
 
     /* 4. Filling memory */
-    fill_memory_blocks(&instance);
+    result = fill_memory_blocks(&instance);
 
+    if (ARGON2_OK != result) {
+        return result;
+    }
     /* 5. Finalization */
     finalize(context, &instance);
 
@@ -191,9 +194,9 @@ int argon2_hash(const uint32_t t_cost, const uint32_t m_cost,
 
     context.out = (uint8_t *)out;
     context.outlen = (uint32_t)hashlen;
-    context.pwd = (uint8_t *)pwd;
+    context.pwd = CONST_CAST(uint8_t *)pwd;
     context.pwdlen = (uint32_t)pwdlen;
-    context.salt = (uint8_t *)salt;
+    context.salt = CONST_CAST(uint8_t *)salt;
     context.saltlen = (uint32_t)saltlen;
     context.secret = NULL;
     context.secretlen = 0;
@@ -273,7 +276,7 @@ int argon2d_hash_raw(const uint32_t t_cost, const uint32_t m_cost,
                        hash, hashlen, NULL, 0, Argon2_d);
 }
 
-int argon2_compare(const uint8_t *b1, const uint8_t *b2, size_t len) {
+static int argon2_compare(const uint8_t *b1, const uint8_t *b2, size_t len) {
     size_t i;
     uint8_t d = 0U;
 
@@ -391,7 +394,7 @@ const char *error_message(int error_code) {
             !!((sizeof(Argon2_ErrorMessage) / sizeof(Argon2_ErrorMessage[0])) ==
                ARGON2_ERROR_CODES_LENGTH)
     };
-    if (error_code < ARGON2_ERROR_CODES_LENGTH) {
+    if (error_code >= 0 && error_code < ARGON2_ERROR_CODES_LENGTH) {
         return Argon2_ErrorMessage[(argon2_error_codes)error_code];
     }
     return "Unknown error code.";

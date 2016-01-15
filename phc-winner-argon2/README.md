@@ -2,7 +2,7 @@
 
 This is the reference C implementation of Argon2, the password-hashing
 function that won the [Password Hashing Competition
-(PHC)](https://password-hashing.net). 
+(PHC)](https://password-hashing.net).
 
 You should use Argon2 whenever you need to hash passwords for credential
 storage, key derivation, or other applications.
@@ -15,7 +15,7 @@ Argon2i and Argon2d are parametrized by
 
 * A **time** cost, which defines the amount of computation realized and
   therefore the execution time, given in number of iterations
-* A **memory** cost, which defines the memory usage, given in kibibytes 
+* A **memory** cost, which defines the memory usage, given in kibibytes
 * A **parallelism** degree, which defines the number of parallel threads
 
 The [Argon2 document](argon2-specs.pdf) gives detailed specs and design
@@ -110,12 +110,12 @@ int main(void)
     uint32_t lanes = parallelism;
     uint32_t threads = parallelism;
     argon2_context context = {
-        hash2, HASHLEN, 
-        pwd, pwdlen, 
+        hash2, HASHLEN,
+        pwd, pwdlen,
         salt, SALTLEN,
         NULL, 0, /* secret data */
         NULL, 0, /* associated data */
-        t_cost, m_cost, parallelism, parallelism, 
+        t_cost, m_cost, parallelism, parallelism,
         NULL, NULL, /* custom memory allocation / deallocation functions */
         ARGON2_DEFAULT_FLAGS /* by default the password is zeroed on exit */
     };
@@ -140,7 +140,7 @@ To use Argon2d instead of Argon2i call `argon2d_hash` instead of
 To produce the crypt-like encoding rather than the raw hash, call
 `argon2i_hash_encoded` for Argon2i and `argon2d_hash_encoded` for Argon2d.
 
-See [`src/argon2.h`](src/argon2.h) for API detais.
+See [`src/argon2.h`](src/argon2.h) for API details.
 
 *Note: in this example the salt is set to the all-`0x00` string for the
 sake of simplicity, but in your application you should use a random salt.*
@@ -183,10 +183,15 @@ Argon2i 1 iterations  4096 MiB 4 threads:  2.72 cpb 11124.86 Mcycles
 Bindings are available for the following languages (make sure to read
 their documentation):
 
+* [Go](https://github.com/tvdburgt/go-argon2) by [@tvdburgt](https://github.com/tvdburgt)
+* [Haskell](https://hackage.haskell.org/package/argon2-1.0.0/docs/Crypto-Argon2.html) by [@ocharles](https://github.com/ocharles)
 * [Javascript](https://github.com/ranisalt/node-argon2), by [@ranisalt](https://github.com/ranisalt)
+* [JVM](https://github.com/phxql/argon2-jvm) by [@phXql](https://github.com/phxql)
+* [Lua](https://github.com/thibaultCha/lua-argon2) by [@thibaultCha](https://github.com/thibaultCha)
 * [Python](https://pypi.python.org/pypi/argon2), by [@flamewow](https://github.com/flamewow)
+* [Python](https://pypi.python.org/pypi/argon2_cffi), by [@hynek](https://github.com/hynek)
 * [Ruby](https://github.com/technion/ruby-argon2) by [@technion](https://github.com/technion)
-
+* [Rust](https://github.com/quininer/argon2-rs) by [@quininer](https://github.com/quininer)
 
 ## Intellectual property
 
