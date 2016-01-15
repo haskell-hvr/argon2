@@ -23,6 +23,8 @@ For access directly to the C interface, see "Crypto.Argon2.FFI".
 module Crypto.Argon2
        ( -- * Computing hashes
          hashEncoded, hash,
+         -- * Verification
+         verify,
          -- * Configuring hashing
          HashOptions(..), Argon2Variant(..), defaultHashOptions,
          -- * Exceptions
@@ -177,3 +179,22 @@ hash' HashOptions{..} password salt argon2i argon2d postProcess =
            throwIO (Argon2ParallelismOutOfRange hashParallelism)
          | otherwise -> throwIO (Argon2Exception a)
   where argon2 = variant argon2i argon2d hashVariant
+
+-- | Verify that a given password could result in a given hash output.
+-- Automatically determines the correct 'HashOptions' based on the
+-- encoded hash (as produced by 'hashEncoded').
+verify
+  :: T.Text -> BS.ByteString -> Bool
+verify encoded password =
+  unsafePerformIO
+    (BS.useAsCString password $
+     \pwd ->
+       BS.useAsCString (T.encodeUtf8 encoded) $
+       \enc ->
+         do res <-
+              (variant FFI.argon2i_verify FFI.argon2d_verify v) enc
+                                                                pwd
+                                                                (fromIntegral (BS.length password))
+            return (res == FFI.ARGON2_OK))
+    where v | T.pack "$argon2i" `T.isPrefixOf` encoded = Argon2i
+            | otherwise = Argon2d
