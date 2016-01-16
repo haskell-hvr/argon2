@@ -53,7 +53,7 @@ data Argon2Variant
   | Argon2d -- ^ Argon2d is faster and uses data-depending memory access, which
             -- makes it suitable for cryptocurrencies and applications with no
             -- threats from side-channel timing attacks.
-  deriving (Eq,Ord,Read,Show,Bounded,Generic,Typeable)
+  deriving (Eq,Ord,Read,Show,Bounded,Generic,Typeable,Enum)
 
 -- | Parameters that can be adjusted to change the runtime performance of the
 -- hashing.

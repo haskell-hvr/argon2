@@ -4,16 +4,15 @@ let
 
   inherit (nixpkgs) pkgs;
 
-  f = { mkDerivation, base, bytestring, exceptions, stdenv, text
-      , transformers
+  f = { mkDerivation, base, bytestring, QuickCheck, stdenv
+      , tasty-quickcheck, text, transformers
       }:
       mkDerivation {
         pname = "argon2";
-        version = "1.0.0";
+        version = "1.1.0";
         src = ./.;
-        libraryHaskellDepends = [
-          base bytestring exceptions text transformers
-        ];
+        libraryHaskellDepends = [ base bytestring text transformers ];
+        testHaskellDepends = [ base QuickCheck tasty-quickcheck ];
         homepage = "https://github.com/ocharles/argon2.git";
         description = "Haskell bindings to libargon2 - the reference implementation of the Argon2 password-hashing function";
         license = stdenv.lib.licenses.bsd3;
