@@ -1,7 +1,7 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Crypto.Argon2 (hashEncoded, hash, verifyEncoded, HashOptions(..), Argon2Variant(..), defaultHashOptions) where
+module Crypto.Argon2 (hashEncoded, hash, verifyEncoded, HashOptions(..), Argon2Variant(..), defaultHashOptions, EncodedPassword, Salt, ClearTextPassword) where
 
 import Control.Exception
 import Data.Typeable
@@ -22,6 +22,13 @@ data HashOptions =
               ,hashParallelism :: !Word32
               ,hashVariant :: !Argon2Variant}
 
+newtype EncodedPassword = EncodedPassword T.Text
+  deriving(Show, Eq)
+newtype Salt = Salt BS.ByteString
+  deriving(Show, Eq)
+newtype ClearTextPassword = ClearTextPassword BS.ByteString
+  deriving(Show, Eq)
+
 defaultHashOptions :: HashOptions
 defaultHashOptions =
   HashOptions {hashIterations = 3
@@ -29,18 +36,18 @@ defaultHashOptions =
               ,hashParallelism = 1
               ,hashVariant = Argon2i}
 
-hashEncoded :: HashOptions -- ^ Options pertaining to how expensive the hash is to calculate
-            -> BS.ByteString -- ^ The password to hash
-            -> BS.ByteString -- ^ The salt to use when hashing
-            -> T.Text -- ^ The encoded password hash
-hashEncoded options password salt =
-  unsafePerformIO (hashEncoded' options password salt FFI.argon2i_hash_encoded FFI.argon2d_hash_encoded)
+hashEncoded :: HashOptions       -- ^ Options pertaining to how expensive the hash is to calculate
+            -> ClearTextPassword -- ^ The password to hash
+            -> Salt              -- ^ The salt to use when hashing
+            -> EncodedPassword   -- ^ The encoded password hash
+hashEncoded options (ClearTextPassword password) (Salt salt) =
+  EncodedPassword $ unsafePerformIO (hashEncoded' options password salt FFI.argon2i_hash_encoded FFI.argon2d_hash_encoded)
 
-hash :: HashOptions -- ^ Options pertaining to how expensive the hash is to calculate
-     -> BS.ByteString -- ^ The password to hash
-     -> BS.ByteString -- ^ The salt to use when hashing
-     -> BS.ByteString -- ^ The un-encoded password hash
-hash options password salt =
+hash :: HashOptions       -- ^ Options pertaining to how expensive the hash is to calculate
+     -> ClearTextPassword -- ^ The password to hash
+     -> Salt              -- ^ The salt to use when hashing
+     -> BS.ByteString     -- ^ The un-encoded password hash
+hash options (ClearTextPassword password) (Salt salt) =
   unsafePerformIO (hash' options password salt FFI.argon2i_hash_raw FFI.argon2d_hash_raw)
 
 variant :: a -> a -> Argon2Variant -> a
@@ -156,11 +163,11 @@ hash' HashOptions{..} password salt argon2i argon2d =
 
 type Argon2Verify  = CString -> CString -> Word64 -> IO Int32
 
-verifyEncoded :: HashOptions    -- ^ Options pertaining to how expensive the hash is to calculate
-              -> T.Text         -- ^ The encodedArgonHash
-              -> BS.ByteString  -- ^ The password to hash
+verifyEncoded :: HashOptions       -- ^ Options pertaining to how expensive the hash is to calculate
+              -> EncodedPassword   -- ^ The encodedArgonHash
+              -> ClearTextPassword -- ^ The password to hash
               -> Bool
-verifyEncoded HashOptions{..} encodedArgonHash password =
+verifyEncoded HashOptions{..} (EncodedPassword encodedArgonHash) (ClearTextPassword password) =
   unsafePerformIO $ do
     res <- BS.useAsCString password $
         \password' ->
