@@ -142,9 +142,10 @@ hash' :: HashOptions
       -> (Ptr a -> IO b)
       -> IO b
 hash' HashOptions{..} password salt argon2i argon2d postProcess =
-  do out <- mallocBytes 512
-     let saltLen = fromIntegral (BS.length salt)
+  do let saltLen = fromIntegral (BS.length salt)
          passwordLen = fromIntegral (BS.length password)
+         outLen = (BS.length salt * 4 + 32 * 4 + length ("$argon2x$m=,t=,p=$$" :: String) + 3*3)
+     out <- mallocBytes outLen
      res <-
        BS.useAsCString password $
        \password' ->
@@ -159,7 +160,7 @@ hash' HashOptions{..} password salt argon2i argon2d postProcess =
                   saltLen
                   64
                   out
-                  512
+                  (fromIntegral outLen)
      case res of
        a
          | a `elem` [FFI.ARGON2_OK] -> postProcess out
