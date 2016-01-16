@@ -14,6 +14,8 @@
 - `verify` added, in order to correctly verify that a password matches an 
   encoded password.
 
+- `defaultHashOptions` are now more expensive.
+
 # 1.0.0
 
 - Initial release

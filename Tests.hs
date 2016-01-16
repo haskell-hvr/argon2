@@ -68,4 +68,17 @@ main =
                      forAll arbitraryPassword $
                      \password ->
                        forAll arbitrarySalt $
-                       \salt -> hash hashOptions password salt /= password)])
+                       \salt -> hash hashOptions password salt /= password)
+               ,testProperty
+                  "defaultHashOptions"
+                  (forAll arbitraryVariant $
+                   \variant ->
+                     (forAll arbitraryPassword $
+                      \password ->
+                        forAll arbitrarySalt $
+                        \salt ->
+                          verify (hashEncoded
+                                    (defaultHashOptions {hashVariant = variant})
+                                    password
+                                    salt)
+                                 password))])

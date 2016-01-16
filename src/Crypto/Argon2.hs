@@ -76,16 +76,16 @@ data HashOptions =
 -- @
 -- 'defaultHashOptions' :: 'HashOptions'
 -- 'defaultHashOptions' =
---   'HashOptions' {'hashIterations' = 3
---               ,'hashMemory' = 2 ^ 12
---               ,'hashParallelism' = 1
+--   'HashOptions' {'hashIterations' = 1
+--               ,'hashMemory' = 2 ^ 17
+--               ,'hashParallelism' = 4
 --               ,'hashVariant' = 'Argon2i'}
 -- @
 defaultHashOptions :: HashOptions
 defaultHashOptions =
-  HashOptions {hashIterations = 3
-              ,hashMemory = 2 ^ 12
-              ,hashParallelism = 1
+  HashOptions {hashIterations = 1
+              ,hashMemory = 2 ^ 17
+              ,hashParallelism = 4
               ,hashVariant = Argon2i}
 
 -- | Encode a password with a given salt and 'HashOptions' and produce a textual
