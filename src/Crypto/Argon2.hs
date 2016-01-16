@@ -95,8 +95,8 @@ hashEncoded :: HashOptions -- ^ Options pertaining to how expensive the hash is 
             -> BS.ByteString -- ^ The salt to use when hashing. Must be less than 4294967295 bytes.
             -> T.Text -- ^ The encoded password hash.
 hashEncoded options password salt =
-  unsafePerformIO (hash' options password salt FFI.argon2i_hash_encoded FFI.argon2d_hash_encoded asText)
-  where asText = fmap T.decodeUtf8 . BS.packCString
+  unsafePerformIO
+    (hashEncoded' options password salt FFI.argon2i_hash_encoded FFI.argon2d_hash_encoded)
 
 -- | Encode a password with a given salt and 'HashOptions' and produce a stream
 -- of bytes.
@@ -105,14 +105,12 @@ hash :: HashOptions -- ^ Options pertaining to how expensive the hash is to calc
      -> BS.ByteString -- ^ The salt to use when hashing. Must be less than 4294967295 bytes.
      -> BS.ByteString -- ^ The un-encoded password hash.
 hash options password salt =
-  unsafePerformIO (hash' options password salt FFI.argon2i_hash_encoded FFI.argon2d_hash_encoded BS.packCString)
+  unsafePerformIO (hash' options password salt FFI.argon2i_hash_raw FFI.argon2d_hash_raw)
 
 variant :: a -> a -> Argon2Variant -> a
 variant a _ Argon2i = a
 variant _ b Argon2d = b
 {-# INLINE variant #-}
-
-type Argon2 a = Word32 -> Word32 -> Word32 -> CString -> Word64 -> CString -> Word64 -> Word64 -> a -> Word64 -> IO Int32
 
 -- | Not all 'HashOptions' can necessarily be used to compute hashes. If you
 -- supply invalid 'HashOptions' (or hashing otherwise fails) a 'Argon2Exception'
@@ -134,17 +132,21 @@ data Argon2Exception
 
 instance Exception Argon2Exception
 
-hash' :: HashOptions
-      -> BS.ByteString
-      -> BS.ByteString
-      -> Argon2 (Ptr a)
-      -> Argon2 (Ptr a)
-      -> (Ptr a -> IO b)
-      -> IO b
-hash' HashOptions{..} password salt argon2i argon2d postProcess =
+type Argon2Encoded = Word32 -> Word32 -> Word32 -> CString -> Word64 -> CString -> Word64 -> Word64 -> CString -> Word64 -> IO Int32
+
+hashEncoded' :: HashOptions
+             -> BS.ByteString
+             -> BS.ByteString
+             -> Argon2Encoded
+             -> Argon2Encoded
+             -> IO T.Text
+hashEncoded' options@HashOptions{..} password salt argon2i argon2d =
   do let saltLen = fromIntegral (BS.length salt)
          passwordLen = fromIntegral (BS.length password)
-         outLen = (BS.length salt * 4 + 32 * 4 + length ("$argon2x$m=,t=,p=$$" :: String) + 3*3)
+         outLen =
+           (BS.length salt * 4 + 32 * 4 +
+            length ("$argon2x$m=,t=,p=$$" :: String) +
+            3 * 3)
      out <- mallocBytes outLen
      res <-
        BS.useAsCString password $
@@ -161,9 +163,52 @@ hash' HashOptions{..} password salt argon2i argon2d postProcess =
                   64
                   out
                   (fromIntegral outLen)
-     case res of
+     handleSuccessCode res options password salt
+     fmap T.decodeUtf8 (BS.packCString out)
+  where argon2 = variant argon2i argon2d hashVariant
+
+type Argon2Unencoded = Word32 -> Word32 -> Word32 -> CString -> Word64 -> CString -> Word64 -> CString -> Word64 -> IO Int32
+
+hash' :: HashOptions
+      -> BS.ByteString
+      -> BS.ByteString
+      -> Argon2Unencoded
+      -> Argon2Unencoded
+      -> IO BS.ByteString
+hash' options@HashOptions{..} password salt argon2i argon2d =
+  do let saltLen = fromIntegral (BS.length salt)
+         passwordLen = fromIntegral (BS.length password)
+         outLen = 512
+     out <- mallocBytes outLen
+     res <-
+       BS.useAsCString password $
+       \password' ->
+         BS.useAsCString salt $
+         \salt' ->
+           argon2 hashIterations
+                  hashMemory
+                  hashParallelism
+                  password'
+                  passwordLen
+                  salt'
+                  saltLen
+                  out
+                  (fromIntegral outLen)
+     handleSuccessCode res options password salt
+     BS.packCString out
+  where argon2 = variant argon2i argon2d hashVariant
+
+handleSuccessCode :: Int32
+                  -> HashOptions
+                  -> BS.ByteString
+                  -> BS.ByteString
+                  -> IO ()
+handleSuccessCode res HashOptions{..} password salt =
+  let saltLen = fromIntegral (BS.length salt)
+      passwordLen = fromIntegral (BS.length password)
+  in case res of
        a
-         | a `elem` [FFI.ARGON2_OK] -> postProcess out
+         | a `elem` [FFI.ARGON2_OK] -> return ()
          | a `elem` [FFI.ARGON2_SALT_TOO_SHORT,FFI.ARGON2_SALT_TOO_LONG] ->
            throwIO (Argon2SaltLengthOutOfRange saltLen)
          | a `elem` [FFI.ARGON2_PWD_TOO_SHORT,FFI.ARGON2_PWD_TOO_LONG] ->
@@ -179,7 +224,6 @@ hash' HashOptions{..} password salt argon2i argon2d postProcess =
              ,FFI.ARGON2_THREADS_TOO_MANY] ->
            throwIO (Argon2ParallelismOutOfRange hashParallelism)
          | otherwise -> throwIO (Argon2Exception a)
-  where argon2 = variant argon2i argon2d hashVariant
 
 -- | Verify that a given password could result in a given hash output.
 -- Automatically determines the correct 'HashOptions' based on the

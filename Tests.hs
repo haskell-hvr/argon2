@@ -60,4 +60,12 @@ main =
                      \password ->
                        forAll arbitrarySalt $
                        \salt ->
-                         verify (hashEncoded hashOptions password salt) password)])
+                         verify (hashEncoded hashOptions password salt) password)
+               ,testProperty
+                  "Unencoded hashing"
+                  (forAll arbitraryHashOptions $
+                   \hashOptions ->
+                     forAll arbitraryPassword $
+                     \password ->
+                       forAll arbitrarySalt $
+                       \salt -> hash hashOptions password salt /= password)])
