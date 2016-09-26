@@ -117,9 +117,9 @@ variant _ b Argon2d = b
 -- will be throw.
 data Argon2Exception
   = -- | The length of the supplied password is outside the range supported by @libargon2@.
-    Argon2PasswordLengthOutOfRange !Word64 -- ^ The erroneous length.
+    Argon2PasswordLengthOutOfRange !CSize -- ^ The erroneous length.
   | -- | The length of the supplied salt is outside the range supported by @libargon2@.
-    Argon2SaltLengthOutOfRange !Word64 -- ^ The erroneous length.
+    Argon2SaltLengthOutOfRange !CSize -- ^ The erroneous length.
   | -- | Either too much or too little memory was requested via 'hashMemory'.
     Argon2MemoryUseOutOfRange !Word32 -- ^ The erroneous 'hashMemory' value.
   | -- | Either too few or too many iterations were requested via 'hashIterations'.
@@ -132,7 +132,7 @@ data Argon2Exception
 
 instance Exception Argon2Exception
 
-type Argon2Encoded = Word32 -> Word32 -> Word32 -> CString -> Word64 -> CString -> Word64 -> Word64 -> CString -> Word64 -> IO Int32
+type Argon2Encoded = Word32 -> Word32 -> Word32 -> CString -> CSize -> CString -> CSize -> CSize -> CString -> CSize -> IO Int32
 
 hashEncoded' :: HashOptions
              -> BS.ByteString
@@ -167,7 +167,7 @@ hashEncoded' options@HashOptions{..} password salt argon2i argon2d =
      fmap T.decodeUtf8 (BS.packCString out)
   where argon2 = variant argon2i argon2d hashVariant
 
-type Argon2Unencoded = Word32 -> Word32 -> Word32 -> CString -> Word64 -> CString -> Word64 -> CString -> Word64 -> IO Int32
+type Argon2Unencoded = Word32 -> Word32 -> Word32 -> CString -> CSize -> CString -> CSize -> CString -> CSize -> IO Int32
 
 hash' :: HashOptions
       -> BS.ByteString
