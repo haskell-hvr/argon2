@@ -14,19 +14,28 @@
 #ifndef ARGON2_OPT_H
 #define ARGON2_OPT_H
 
-#include <stdint.h>
-#include <emmintrin.h>
-#include "argon2.h"
 #include "core.h"
+#include <emmintrin.h>
 
 /*
- * Function fills a new memory block. Differs from the
+ * Function fills a new memory block by XORing the new block over the old one. Memory must be initialized. 
+ * After finishing, @state is identical to @next_block
  * @param state Pointer to the just produced block. Content will be updated(!)
  * @param ref_block Pointer to the reference block
- * @param next_block Pointer to the block to be constructed
+ * @param next_block Pointer to the block to be XORed over. May coincide with @ref_block
  * @pre all block pointers must be valid
  */
+void fill_block_with_xor(__m128i *state, const uint8_t *ref_block, uint8_t *next_block);
+
+/* LEGACY CODE: version 1.2.1 and earlier
+* Function fills a new memory block by overwriting @next_block.
+* @param state Pointer to the just produced block. Content will be updated(!)
+* @param ref_block Pointer to the reference block
+* @param next_block Pointer to the block to be XORed over. May coincide with @ref_block
+* @pre all block pointers must be valid
+*/
 void fill_block(__m128i *state, const uint8_t *ref_block, uint8_t *next_block);
+
 
 /*
  * Generate pseudo-random values to reference blocks in the segment and puts
@@ -39,16 +48,5 @@ void fill_block(__m128i *state, const uint8_t *ref_block, uint8_t *next_block);
 void generate_addresses(const argon2_instance_t *instance,
                         const argon2_position_t *position,
                         uint64_t *pseudo_rands);
-
-/*
- * Function that fills the segment using previous segments also from other
- * threads.
- * Identical to the reference code except that it calls optimized FillBlock()
- * @param instance Pointer to the current instance
- * @param position Current position
- * @pre all block pointers must be valid
- */
-void fill_segment(const argon2_instance_t *instance,
-                  argon2_position_t position);
 
 #endif /* ARGON2_OPT_H */

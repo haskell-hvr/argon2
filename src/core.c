@@ -93,7 +93,6 @@ int allocate_memory(block **memory, uint32_t m_cost) {
         if (!*memory) {
             return ARGON2_MEMORY_ALLOCATION_ERROR;
         }
-
         return ARGON2_OK;
     } else {
         return ARGON2_MEMORY_ALLOCATION_ERROR;
@@ -104,7 +103,7 @@ void NOT_OPTIMIZED secure_wipe_memory(void *v, size_t n) {
 #if defined(_MSC_VER) && VC_GE_2005(_MSC_VER)
     SecureZeroMemory(v, n);
 #elif defined memset_s
-    memset_s(v, n);
+    memset_s(v, n, 0, n);
 #elif defined(__OpenBSD__)
     explicit_bzero(v, n);
 #else
@@ -249,25 +248,25 @@ static void *fill_segment_thr(void *thread_data)
     return 0;
 }
 
-void fill_memory_blocks(argon2_instance_t *instance) {
+int fill_memory_blocks(argon2_instance_t *instance) {
     uint32_t r, s;
     argon2_thread_handle_t *thread = NULL;
     argon2_thread_data *thr_data = NULL;
 
     if (instance == NULL || instance->lanes == 0) {
-        return;
+        return ARGON2_THREAD_FAIL;
     }
 
     /* 1. Allocating space for threads */
     thread = calloc(instance->lanes, sizeof(argon2_thread_handle_t));
     if (thread == NULL) {
-        return;
+        return ARGON2_MEMORY_ALLOCATION_ERROR;
     }
 
     thr_data = calloc(instance->lanes, sizeof(argon2_thread_data));
     if (thr_data == NULL) {
         free(thread);
-        return;
+        return ARGON2_MEMORY_ALLOCATION_ERROR;
     }
 
     for (r = 0; r < instance->passes; ++r) {
@@ -283,10 +282,9 @@ void fill_memory_blocks(argon2_instance_t *instance) {
                 if (l >= instance->threads) {
                     rc = argon2_thread_join(thread[l - instance->threads]);
                     if (rc) {
-                        printf(
-                            "ERROR; return code from pthread_join() #1 is %d\n",
-                            rc);
-                        exit(-1);
+                        free(thr_data);
+                        free(thread);
+                        return ARGON2_THREAD_FAIL;
                     }
                 }
 
@@ -302,10 +300,9 @@ void fill_memory_blocks(argon2_instance_t *instance) {
                 rc = argon2_thread_create(&thread[l], &fill_segment_thr,
                                           (void *)&thr_data[l]);
                 if (rc) {
-                    printf("ERROR; return code from argon2_thread_create() is "
-                           "%d\n",
-                           rc);
-                    exit(-1);
+                    free(thr_data);
+                    free(thread);
+                    return ARGON2_THREAD_FAIL;
                 }
 
                 /* fill_segment(instance, position); */
@@ -317,9 +314,7 @@ void fill_memory_blocks(argon2_instance_t *instance) {
                  ++l) {
                 rc = argon2_thread_join(thread[l]);
                 if (rc) {
-                    printf("ERROR; return code from pthread_join() is %d\n",
-                           rc);
-                    exit(-1);
+                    return ARGON2_THREAD_FAIL;
                 }
             }
         }
@@ -335,6 +330,7 @@ void fill_memory_blocks(argon2_instance_t *instance) {
     if (thr_data != NULL) {
         free(thr_data);
     }
+    return ARGON2_OK;
 }
 
 int validate_inputs(const argon2_context *context) {
@@ -424,7 +420,7 @@ int validate_inputs(const argon2_context *context) {
         return ARGON2_MEMORY_TOO_MUCH;
     }
 
-    if (context->m_cost < 8*context->lanes) {
+    if (context->m_cost < 8 * context->lanes) {
         return ARGON2_MEMORY_TOO_LITTLE;
     }
 
@@ -512,7 +508,7 @@ void initial_hash(uint8_t *blockhash, argon2_context *context,
     store32(&value, context->t_cost);
     blake2b_update(&BlakeHash, (const uint8_t *)&value, sizeof(value));
 
-    store32(&value, ARGON2_VERSION_NUMBER);
+    store32(&value, context->version);
     blake2b_update(&BlakeHash, (const uint8_t *)&value, sizeof(value));
 
     store32(&value, (uint32_t)type);
@@ -579,7 +575,7 @@ int initialize(argon2_instance_t *instance, argon2_context *context) {
         if (ARGON2_OK != result) {
             return result;
         }
-        memcpy(&(instance->memory), p, sizeof(instance->memory));
+        instance->memory = (block *)p;
     } else {
         result = allocate_memory(&(instance->memory), instance->memory_blocks);
         if (ARGON2_OK != result) {
@@ -609,4 +605,3 @@ int initialize(argon2_instance_t *instance, argon2_context *context) {
 
     return ARGON2_OK;
 }
-

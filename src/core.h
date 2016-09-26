@@ -24,13 +24,12 @@
 #define ALIGN(x)
 #endif
 
+#define CONST_CAST(x) (x)(uintptr_t)
+
 /*************************Argon2 internal
  * constants**************************************************/
 
 enum argon2_core_constants {
-    /* Version of the algorithm */
-    ARGON2_VERSION_NUMBER = 0x10,
-
     /* Memory block size in bytes */
     ARGON2_BLOCK_SIZE = 1024,
     ARGON2_QWORDS_IN_BLOCK = ARGON2_BLOCK_SIZE / 8,
@@ -75,6 +74,7 @@ void xor_block(block *dst, const block *src);
  */
 typedef struct Argon2_instance_t {
     block *memory;          /* Memory pointer */
+    uint32_t version;
     uint32_t passes;        /* Number of passes */
     uint32_t memory_blocks; /* Number of blocks in memory */
     uint32_t segment_length;
@@ -212,7 +212,8 @@ void fill_segment(const argon2_instance_t *instance,
  * Function that fills the entire memory t_cost times based on the first two
  * blocks in each lane
  * @param instance Pointer to the current instance
+ * @return ARGON2_OK if successful, @context->state
  */
-void fill_memory_blocks(argon2_instance_t *instance);
+int fill_memory_blocks(argon2_instance_t *instance);
 
 #endif

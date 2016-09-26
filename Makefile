@@ -19,14 +19,21 @@ SRC_BENCH = src/bench.c
 SRC_GENKAT = src/genkat.c
 OBJ = $(SRC:.c=.o)
 
-CFLAGS = -std=c89 -pthread -O3 -Wall -g
+CFLAGS += -std=c89 -pthread -O3 -Wall -g -Iinclude -Isrc
+CI_CFLAGS := $(CFLAGS) -Werror=declaration-after-statement -D_FORTIFY_SOURCE=2 \
+				-Wextra -Wno-type-limits -Werror -coverage -DTEST_LARGE_RAM
 
-#OPT=TRUE
-ifeq ($(OPT), TRUE)
-	CFLAGS += -march=native
-	SRC += src/opt.c
-else
+OPTTARGET ?= native
+OPTTEST := $(shell $(CC) -Iinclude -Isrc -march=$(OPTTARGET) src/opt.c -c \
+			-o /dev/null 2>/dev/null; echo $$?)
+# Detect compatible platform
+ifneq ($(OPTTEST), 0)
+$(info Building without optimizations)
 	SRC += src/ref.c
+else
+$(info Building with optimizations for $(OPTTARGET))
+	CFLAGS += -march=$(OPTTARGET)
+	SRC += src/opt.c
 endif
 
 BUILD_PATH := $(shell pwd)
@@ -35,9 +42,10 @@ KERNEL_NAME := $(shell uname -s)
 LIB_NAME=argon2
 ifeq ($(KERNEL_NAME), Linux)
 	LIB_EXT := so
-	LIB_CFLAGS := -shared -fPIC
+	LIB_CFLAGS := -shared -fPIC -fvisibility=hidden -DA2_VISCTL=1
+	SO_LDFLAGS := -Wl,-soname,libargon2.so.0
 endif
-ifeq ($(KERNEL_NAME), NetBSD)
+ifeq ($(KERNEL_NAME), $(filter $(KERNEL_NAME),FreeBSD NetBSD OpenBSD))
 	LIB_EXT := so
 	LIB_CFLAGS := -shared -fPIC
 endif
@@ -45,34 +53,64 @@ ifeq ($(KERNEL_NAME), Darwin)
 	LIB_EXT := dylib
 	LIB_CFLAGS := -dynamiclib -install_name @rpath/lib$(LIB_NAME).$(LIB_EXT)
 endif
+ifeq ($(findstring CYGWIN, $(KERNEL_NAME)), CYGWIN)
+	LIB_EXT := dll
+	LIB_CFLAGS := -shared -Wl,--out-implib,lib$(LIB_NAME).$(LIB_EXT).a
+endif
 ifeq ($(findstring MINGW, $(KERNEL_NAME)), MINGW)
 	LIB_EXT := dll
 	LIB_CFLAGS := -shared -Wl,--out-implib,lib$(LIB_NAME).$(LIB_EXT).a
 endif
-ifeq ($(KERNEL_NAME), $(filter $(KERNEL_NAME),OpenBSD FreeBSD))
+ifeq ($(findstring MSYS, $(KERNEL_NAME)), MSYS)
+	LIB_EXT := dll
+	LIB_CFLAGS := -shared -Wl,--out-implib,lib$(LIB_NAME).$(LIB_EXT).a
+endif
+ifeq ($(KERNEL_NAME), SunOS)
+	CC := gcc
+	CFLAGS += -D_REENTRANT
 	LIB_EXT := so
 	LIB_CFLAGS := -shared -fPIC
 endif
 
+ifeq ($(KERNEL_NAME), Linux)
+ifeq ($(CC), clang)
+	CI_CFLAGS += -fsanitize=address -fsanitize=undefined
+endif
+endif
+
 LIB_SH := lib$(LIB_NAME).$(LIB_EXT)
 LIB_ST := lib$(LIB_NAME).a
+LIBRARIES = $(LIB_SH) $(LIB_ST)
+HEADERS = include/argon2.h
 
-.PHONY: clean dist format $(GENKAT)
+INSTALL = install
+
+DESTDIR =
+PREFIX = /usr
+INCLUDE_REL = include
+LIBRARY_REL = lib
+BINARY_REL = bin
+
+INST_INCLUDE = $(DESTDIR)$(PREFIX)/$(INCLUDE_REL)
+INST_LIBRARY = $(DESTDIR)$(PREFIX)/$(LIBRARY_REL)
+INST_BINARY = $(DESTDIR)$(PREFIX)/$(BINARY_REL)
+
+.PHONY: clean dist format $(GENKAT) all install
 
 all: clean $(RUN) libs 
-libs: $(LIB_SH) $(LIB_ST)
+libs: $(LIBRARIES)
 
 $(RUN):	        $(SRC) $(SRC_RUN)
-		$(CC) $(CFLAGS) $^ -Isrc  -o $@
+		$(CC) $(CFLAGS) $(LDFLAGS) $^ -o $@
 
 $(BENCH):       $(SRC) $(SRC_BENCH)
-		$(CC) $(CFLAGS) $^ -Isrc  -o $@
+		$(CC) $(CFLAGS) $^ -o $@
 
 $(GENKAT):      $(SRC) $(SRC_GENKAT)
-		$(CC) $(CFLAGS) $^ -Isrc  -o $@ -DGENKAT
+		$(CC) $(CFLAGS) $^ -o $@ -DGENKAT
 
 $(LIB_SH): 	$(SRC)
-		$(CC) $(CFLAGS) $(LIB_CFLAGS) $^ -Isrc -o $@
+		$(CC) $(CFLAGS) $(LIB_CFLAGS) $(LDFLAGS) $(SO_LDFLAGS) $^ -o $@
 
 $(LIB_ST): 	$(OBJ)
 		ar rcs $@ $^
@@ -80,6 +118,7 @@ $(LIB_ST): 	$(OBJ)
 clean:
 		rm -f $(RUN) $(BENCH) $(GENKAT)
 		rm -f $(LIB_SH) $(LIB_ST) kat-argon2* 
+		rm -f testcase
 		rm -rf *.dSYM
 		cd src/ && rm -f *.o
 		cd src/blake2/ && rm -f *.o
@@ -89,8 +128,26 @@ dist:
 		cd ..; \
 		tar -c --exclude='.??*' -z -f $(DIST)-`date "+%Y%m%d"`.tgz $(DIST)/*
 
-test:
+test:   $(SRC) src/test.c
+		$(CC) $(CFLAGS)  -Wextra -Wno-type-limits $^ -o testcase
 		@sh kats/test.sh
+		./testcase
+
+testci:   $(SRC) src/test.c
+		$(CC) $(CI_CFLAGS) $^ -o testcase
+		@sh kats/test.sh
+		./testcase
+
+.PHONY: test
 
 format:
-		clang-format -style="{BasedOnStyle: llvm, IndentWidth: 4}" -i src/*.c src/*.h src/blake2/*.c src/blake2/*.h
+		clang-format -style="{BasedOnStyle: llvm, IndentWidth: 4}" \
+			-i include/*.h src/*.c src/*.h src/blake2/*.c src/blake2/*.h
+
+install: $(RUN) libs
+	$(INSTALL) -d $(INST_INCLUDE)
+	$(INSTALL) $(HEADERS) $(INST_INCLUDE)
+	$(INSTALL) -d $(INST_LIBRARY)
+	$(INSTALL) $(LIBRARIES) $(INST_LIBRARY)
+	$(INSTALL) -d $(INST_BINARY)
+	$(INSTALL) $(RUN) $(INST_BINARY)
