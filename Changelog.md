@@ -1,3 +1,22 @@
+# 1.2.0
+
+- Updated embedded phc-winner-argon2, so that hashes are generated
+  using version 1.3 of the argon2 specification.
+  
+  Note that that hashes generated using this version are different than
+  hashes generated using previous versions, so anything that compares them
+  or relies on them being stable may be broken by this update. 
+  However, Crypto.Argon2.verify will continue to be able to verify
+  hashes produced by previous versions.
+
+- Use CSize for portability instead of Word64, fixing build on 32 bit
+  systems. This changed the constructors of Argon2Exception, an API change.
+
+- Bug fix: Crypto.Argon2.hash returned a ByteString truncated at the first
+  NULL.
+
+- Added use-system-library build flag.
+
 # 1.1.0
 
 - First stable release. Same API as 1.0.0, but now features documentation and
