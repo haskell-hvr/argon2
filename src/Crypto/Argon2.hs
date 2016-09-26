@@ -195,7 +195,7 @@ hash' options@HashOptions{..} password salt argon2i argon2d =
                   out
                   (fromIntegral outLen)
      handleSuccessCode res options password salt
-     BS.packCString out
+     BS.packCStringLen (out, outLen)
   where argon2 = variant argon2i argon2d hashVariant
 
 handleSuccessCode :: Int32
