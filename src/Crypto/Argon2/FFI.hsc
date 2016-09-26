@@ -21,6 +21,8 @@ foreign import ccall unsafe "argon2.h argon2i_verify" argon2i_verify :: CString 
 
 foreign import ccall unsafe "argon2.h argon2d_verify" argon2d_verify :: CString -> Ptr a -> CSize -> IO (#type int)
 
+foreign import ccall unsafe "argon2.h argon2_encodedlen" argon2_encodedlen :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> IO CSize
+
 pattern ARGON2_OK = (#const ARGON2_OK)
 pattern ARGON2_OUTPUT_PTR_NULL = (#const ARGON2_OUTPUT_PTR_NULL)
 pattern ARGON2_OUTPUT_TOO_SHORT = (#const ARGON2_OUTPUT_TOO_SHORT)

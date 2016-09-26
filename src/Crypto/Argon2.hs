@@ -143,10 +143,12 @@ hashEncoded' :: HashOptions
 hashEncoded' options@HashOptions{..} password salt argon2i argon2d =
   do let saltLen = fromIntegral (BS.length salt)
          passwordLen = fromIntegral (BS.length password)
-         outLen =
-           (BS.length salt * 4 + 32 * 4 +
-            length ("$argon2x$m=,t=,p=$$" :: String) +
-            3 * 3)
+     outLen <- fmap fromIntegral $ FFI.argon2_encodedlen
+                                              hashIterations
+                                              hashMemory
+                                              hashParallelism
+                                              saltLen
+                                              hashlen
      out <- mallocBytes outLen
      res <-
        BS.useAsCString password $
@@ -159,13 +161,14 @@ hashEncoded' options@HashOptions{..} password salt argon2i argon2d =
                   password'
                   passwordLen
                   salt'
-                  saltLen
-                  64
+                  (fromIntegral saltLen)
+                  (fromIntegral hashlen)
                   out
                   (fromIntegral outLen)
      handleSuccessCode res options password salt
      fmap T.decodeUtf8 (BS.packCString out)
   where argon2 = variant argon2i argon2d hashVariant
+        hashlen = 64
 
 type Argon2Unencoded = Word32 -> Word32 -> Word32 -> CString -> CSize -> CString -> CSize -> CString -> CSize -> IO Int32
 
