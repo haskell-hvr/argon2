@@ -15,6 +15,7 @@ cabal-version:       >=1.10
 extra-source-files: phc-winner-argon2/src/blake2/blake2.h
                     phc-winner-argon2/src/blake2/blake2-impl.h
                     phc-winner-argon2/src/blake2/blamka-round-ref.h
+                    phc-winner-argon2/include/argon2.h
 
 flag use-system-library
   description: Link against system libargon2 library rather than embedded copy
@@ -30,7 +31,6 @@ library
     extra-libraries: argon2
   else
     c-sources: phc-winner-argon2/src/argon2.c
-               phc-winner-argon2/src/argon2.h
                phc-winner-argon2/src/core.c
                phc-winner-argon2/src/blake2/blake2b.c
                phc-winner-argon2/src/thread.c
@@ -41,6 +41,7 @@ library
                phc-winner-argon2/src/thread.h
                phc-winner-argon2/src/ref.h
     include-dirs: phc-winner-argon2/src
+                  phc-winner-argon2/include
 
 test-suite tests
   type: exitcode-stdio-1.0
