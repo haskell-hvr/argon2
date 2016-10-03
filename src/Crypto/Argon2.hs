@@ -117,9 +117,9 @@ variant _ b Argon2d = b
 -- will be throw.
 data Argon2Exception
   = -- | The length of the supplied password is outside the range supported by @libargon2@.
-    Argon2PasswordLengthOutOfRange !Word64 -- ^ The erroneous length.
+    Argon2PasswordLengthOutOfRange !CSize -- ^ The erroneous length.
   | -- | The length of the supplied salt is outside the range supported by @libargon2@.
-    Argon2SaltLengthOutOfRange !Word64 -- ^ The erroneous length.
+    Argon2SaltLengthOutOfRange !CSize -- ^ The erroneous length.
   | -- | Either too much or too little memory was requested via 'hashMemory'.
     Argon2MemoryUseOutOfRange !Word32 -- ^ The erroneous 'hashMemory' value.
   | -- | Either too few or too many iterations were requested via 'hashIterations'.
@@ -132,7 +132,7 @@ data Argon2Exception
 
 instance Exception Argon2Exception
 
-type Argon2Encoded = Word32 -> Word32 -> Word32 -> CString -> Word64 -> CString -> Word64 -> Word64 -> CString -> Word64 -> IO Int32
+type Argon2Encoded = Word32 -> Word32 -> Word32 -> CString -> CSize -> CString -> CSize -> CSize -> CString -> CSize -> IO Int32
 
 hashEncoded' :: HashOptions
              -> BS.ByteString
@@ -143,10 +143,12 @@ hashEncoded' :: HashOptions
 hashEncoded' options@HashOptions{..} password salt argon2i argon2d =
   do let saltLen = fromIntegral (BS.length salt)
          passwordLen = fromIntegral (BS.length password)
-         outLen =
-           (BS.length salt * 4 + 32 * 4 +
-            length ("$argon2x$m=,t=,p=$$" :: String) +
-            3 * 3)
+     outLen <- fmap fromIntegral $ FFI.argon2_encodedlen
+                                              hashIterations
+                                              hashMemory
+                                              hashParallelism
+                                              saltLen
+                                              hashlen
      out <- mallocBytes outLen
      res <-
        BS.useAsCString password $
@@ -159,15 +161,16 @@ hashEncoded' options@HashOptions{..} password salt argon2i argon2d =
                   password'
                   passwordLen
                   salt'
-                  saltLen
-                  64
+                  (fromIntegral saltLen)
+                  (fromIntegral hashlen)
                   out
                   (fromIntegral outLen)
      handleSuccessCode res options password salt
      fmap T.decodeUtf8 (BS.packCString out)
   where argon2 = variant argon2i argon2d hashVariant
+        hashlen = 64
 
-type Argon2Unencoded = Word32 -> Word32 -> Word32 -> CString -> Word64 -> CString -> Word64 -> CString -> Word64 -> IO Int32
+type Argon2Unencoded = Word32 -> Word32 -> Word32 -> CString -> CSize -> CString -> CSize -> CString -> CSize -> IO Int32
 
 hash' :: HashOptions
       -> BS.ByteString
@@ -195,7 +198,7 @@ hash' options@HashOptions{..} password salt argon2i argon2d =
                   out
                   (fromIntegral outLen)
      handleSuccessCode res options password salt
-     BS.packCString out
+     BS.packCStringLen (out, outLen)
   where argon2 = variant argon2i argon2d hashVariant
 
 handleSuccessCode :: Int32

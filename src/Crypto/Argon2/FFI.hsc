@@ -9,17 +9,19 @@ module Crypto.Argon2.FFI where
 import Foreign
 import Foreign.C
 
-foreign import ccall unsafe "argon2.h argon2i_hash_encoded" argon2i_hash_encoded :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> Ptr a -> (#type const size_t) -> Ptr b -> (# type const size_t) -> (#type const size_t) -> CString -> (#type const size_t) -> IO (#type int)
+foreign import ccall unsafe "argon2.h argon2i_hash_encoded" argon2i_hash_encoded :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> Ptr a -> CSize -> Ptr b -> CSize -> CSize -> CString -> CSize -> IO (#type int)
 
-foreign import ccall unsafe "argon2.h argon2i_hash_raw" argon2i_hash_raw :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> Ptr a -> (#type const size_t) -> Ptr b -> (#type size_t) -> Ptr c -> (#type const size_t) -> IO (#type int)
+foreign import ccall unsafe "argon2.h argon2i_hash_raw" argon2i_hash_raw :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> Ptr a -> CSize -> Ptr b -> CSize -> Ptr c -> CSize -> IO (#type int)
 
-foreign import ccall unsafe "argon2.h argon2d_hash_encoded" argon2d_hash_encoded :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> Ptr a -> (#type const size_t) -> Ptr b -> (# type const size_t) -> (#type const size_t) -> CString -> (#type const size_t) -> IO (#type int)
+foreign import ccall unsafe "argon2.h argon2d_hash_encoded" argon2d_hash_encoded :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> Ptr a -> CSize -> Ptr b -> CSize -> CSize -> CString -> CSize -> IO (#type int)
 
-foreign import ccall unsafe "argon2.h argon2d_hash_raw" argon2d_hash_raw :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> Ptr a -> (#type const size_t) -> Ptr b -> (#type size_t) -> Ptr c -> (#type const size_t) -> IO (#type int)
+foreign import ccall unsafe "argon2.h argon2d_hash_raw" argon2d_hash_raw :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> Ptr a -> CSize -> Ptr b -> CSize -> Ptr c -> CSize -> IO (#type int)
 
-foreign import ccall unsafe "argon2.h argon2i_verify" argon2i_verify :: CString -> Ptr a -> (#type const size_t) -> IO (#type int)
+foreign import ccall unsafe "argon2.h argon2i_verify" argon2i_verify :: CString -> Ptr a -> CSize -> IO (#type int)
 
-foreign import ccall unsafe "argon2.h argon2d_verify" argon2d_verify :: CString -> Ptr a -> (#type const size_t) -> IO (#type int)
+foreign import ccall unsafe "argon2.h argon2d_verify" argon2d_verify :: CString -> Ptr a -> CSize -> IO (#type int)
+
+foreign import ccall unsafe "argon2.h argon2_encodedlen" argon2_encodedlen :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> IO CSize
 
 pattern ARGON2_OK = (#const ARGON2_OK)
 pattern ARGON2_OUTPUT_PTR_NULL = (#const ARGON2_OUTPUT_PTR_NULL)
