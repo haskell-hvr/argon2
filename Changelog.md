@@ -17,6 +17,8 @@
 
 - Added use-system-library build flag.
 
+- Build against `base-4.9`
+
 # 1.1.0
 
 - First stable release. Same API as 1.0.0, but now features documentation and
