@@ -52,15 +52,15 @@ enum {
 };
 
 /* Streaming API */
-int blake2b_init(blake2b_state *S, size_t outlen);
-int blake2b_init_key(blake2b_state *S, size_t outlen, const void *key,
+int blake2b_init_mangled(blake2b_state *S, size_t outlen);
+int blake2b_init_key_mangled(blake2b_state *S, size_t outlen, const void *key,
                      size_t keylen);
-int blake2b_init_param(blake2b_state *S, const blake2b_param *P);
-int blake2b_update(blake2b_state *S, const void *in, size_t inlen);
-int blake2b_final(blake2b_state *S, void *out, size_t outlen);
+int blake2b_init_param_mangled(blake2b_state *S, const blake2b_param *P);
+int blake2b_update_mangled(blake2b_state *S, const void *in, size_t inlen);
+int blake2b_final_mangled(blake2b_state *S, void *out, size_t outlen);
 
 /* Simple API */
-int blake2b(void *out, size_t outlen, const void *in, size_t inlen,
+int blake2b_mangled(void *out, size_t outlen, const void *in, size_t inlen,
             const void *key, size_t keylen);
 
 /* Argon2 Team - Begin Code */
