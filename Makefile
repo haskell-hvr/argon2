@@ -1,15 +1,26 @@
 #
-# Argon2 source code package
-# 
-# This work is licensed under a Creative Commons CC0 1.0 License/Waiver.
-# 
-# You should have received a copy of the CC0 Public Domain Dedication along with
-# this software. If not, see <http://creativecommons.org/publicdomain/zero/1.0/>.
+# Argon2 reference source code package - reference C implementations
+#
+# Copyright 2015
+# Daniel Dinu, Dmitry Khovratovich, Jean-Philippe Aumasson, and Samuel Neves
+#
+# You may use this work under the terms of a Creative Commons CC0 1.0
+# License/Waiver or the Apache Public License 2.0, at your option. The terms of
+# these licenses can be found at:
+#
+# - CC0 1.0 Universal : http://creativecommons.org/publicdomain/zero/1.0
+# - Apache 2.0        : http://www.apache.org/licenses/LICENSE-2.0
+#
+# You should have received a copy of both of these licenses along with this
+# software. If not, they may be obtained at the above URLs.
 #
 
 RUN = argon2
 BENCH = bench
 GENKAT = genkat
+
+# Increment on an ABI breaking change
+ABI_VERSION = 0
 
 DIST = phc-winner-argon2
 
@@ -19,7 +30,14 @@ SRC_BENCH = src/bench.c
 SRC_GENKAT = src/genkat.c
 OBJ = $(SRC:.c=.o)
 
-CFLAGS += -std=c89 -pthread -O3 -Wall -g -Iinclude -Isrc
+CFLAGS += -std=c89 -O3 -Wall -g -Iinclude -Isrc
+
+ifeq ($(NO_THREADS), 1)
+CFLAGS += -DARGON2_NO_THREADS
+else
+CFLAGS += -pthread
+endif
+
 CI_CFLAGS := $(CFLAGS) -Werror=declaration-after-statement -D_FORTIFY_SOURCE=2 \
 				-Wextra -Wno-type-limits -Werror -coverage -DTEST_LARGE_RAM
 
@@ -41,17 +59,19 @@ KERNEL_NAME := $(shell uname -s)
 
 LIB_NAME=argon2
 ifeq ($(KERNEL_NAME), Linux)
-	LIB_EXT := so
+	LIB_EXT := so.$(ABI_VERSION)
 	LIB_CFLAGS := -shared -fPIC -fvisibility=hidden -DA2_VISCTL=1
-	SO_LDFLAGS := -Wl,-soname,libargon2.so.0
+	SO_LDFLAGS := -Wl,-soname,lib$(LIB_NAME).$(LIB_EXT)
+	LINKED_LIB_EXT := so
 endif
 ifeq ($(KERNEL_NAME), $(filter $(KERNEL_NAME),FreeBSD NetBSD OpenBSD))
 	LIB_EXT := so
 	LIB_CFLAGS := -shared -fPIC
 endif
 ifeq ($(KERNEL_NAME), Darwin)
-	LIB_EXT := dylib
+	LIB_EXT := $(ABI_VERSION).dylib
 	LIB_CFLAGS := -dynamiclib -install_name @rpath/lib$(LIB_NAME).$(LIB_EXT)
+	LINKED_LIB_EXT := dylib
 endif
 ifeq ($(findstring CYGWIN, $(KERNEL_NAME)), CYGWIN)
 	LIB_EXT := dll
@@ -80,6 +100,12 @@ endif
 
 LIB_SH := lib$(LIB_NAME).$(LIB_EXT)
 LIB_ST := lib$(LIB_NAME).a
+
+ifdef LINKED_LIB_EXT
+LINKED_LIB_SH := lib$(LIB_NAME).$(LINKED_LIB_EXT)
+endif
+
+
 LIBRARIES = $(LIB_SH) $(LIB_ST)
 HEADERS = include/argon2.h
 
@@ -97,7 +123,7 @@ INST_BINARY = $(DESTDIR)$(PREFIX)/$(BINARY_REL)
 
 .PHONY: clean dist format $(GENKAT) all install
 
-all: clean $(RUN) libs 
+all: $(RUN) libs
 libs: $(LIBRARIES)
 
 $(RUN):	        $(SRC) $(SRC_RUN)
@@ -117,7 +143,7 @@ $(LIB_ST): 	$(OBJ)
 
 clean:
 		rm -f $(RUN) $(BENCH) $(GENKAT)
-		rm -f $(LIB_SH) $(LIB_ST) kat-argon2* 
+		rm -f $(LIB_SH) $(LIB_ST) kat-argon2*
 		rm -f testcase
 		rm -rf *.dSYM
 		cd src/ && rm -f *.o
@@ -128,12 +154,12 @@ dist:
 		cd ..; \
 		tar -c --exclude='.??*' -z -f $(DIST)-`date "+%Y%m%d"`.tgz $(DIST)/*
 
-test:   $(SRC) src/test.c
+test:           $(SRC) src/test.c
 		$(CC) $(CFLAGS)  -Wextra -Wno-type-limits $^ -o testcase
 		@sh kats/test.sh
 		./testcase
 
-testci:   $(SRC) src/test.c
+testci:         $(SRC) src/test.c
 		$(CC) $(CI_CFLAGS) $^ -o testcase
 		@sh kats/test.sh
 		./testcase
@@ -146,8 +172,16 @@ format:
 
 install: $(RUN) libs
 	$(INSTALL) -d $(INST_INCLUDE)
-	$(INSTALL) $(HEADERS) $(INST_INCLUDE)
+	$(INSTALL) -m 0644 $(HEADERS) $(INST_INCLUDE)
 	$(INSTALL) -d $(INST_LIBRARY)
 	$(INSTALL) $(LIBRARIES) $(INST_LIBRARY)
+ifdef LINKED_LIB_SH
+	cd $(INST_LIBRARY) && ln -s $(notdir $(LIB_SH) $(LINKED_LIB_SH))
+endif
 	$(INSTALL) -d $(INST_BINARY)
 	$(INSTALL) $(RUN) $(INST_BINARY)
+
+uninstall:
+	cd $(INST_INCLUDE) && rm -f $(notdir $(HEADERS))
+	cd $(INST_LIBRARY) && rm -f $(notdir $(LIBRARIES) $(LINKED_LIB_SH))
+	cd $(INST_BINARY) && rm -f $(notdir $(RUN))
