@@ -1,16 +1,32 @@
-cabal-version:       1.12
+cabal-version:       1.22
 name:                argon2
-version:             1.2.0
+version:             1.3.0
 
-synopsis:            Haskell bindings to libargon2 - the reference implementation of the Argon2 password-hashing function
--- description:
+synopsis:            Memory-hard password hash and proof-of-work function
+description:
+    Argon2 is the key derivation function (KDF) selected as the winner of the [Password Hashing Competition](https://en.wikipedia.org/wiki/Password_Hashing_Competition). The API exposed by this bindings provide access to the 3 specified variants
+    .
+    * @Argon2d@ (maximize resistance to GPU cracking attacks),
+    * @Argon2i@ (optimized to resist side-channel attacks), and
+    * @Argon2id@ (hybrid version combining @Argon2d@ and @Argon2i@)
+    .
+    and allows to control various parameters (time cost, memory cost, parallelism) of the Argon2 function. Moreover, it is also supported to generate and verify the deprecated version 1.0 hashes, as well as the current version 1.3 hashes.
+    .
+    The Haskell API supports both raw binary hashes as well as the ASCII-based [PHC string format](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md).
+    .
+    This version provides bindings to the \"@20171227@\" release of the [Argon2 reference implementation (libargon2)](https://github.com/P-H-C/phc-winner-argon2) of the Argon2 password-hashing function.
+    .
+    Please refer to the [Argon2 specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf) for more information.
+
+
 license:             BSD3
-license-file:        LICENSE
-author:              Ollie Charles
+license-files:       LICENSE
+                     phc-winner-argon2/LICENSE
+
+author:              Ollie Charles, Herbert Valerio Riedel
 maintainer:          Herbert Valerio Riedel <hvr@gnu.org>
 homepage:            https://github.com/hvr/argon2/issues
--- copyright:
--- category:
+category:            Cryptography
 build-type:          Simple
 extra-source-files:  Changelog.md
 
@@ -27,7 +43,7 @@ source-repository head
   location: https://github.com/hvr/argon2.git
 
 flag use-system-library
-  description: Link against system @libargon2@ library rather than embedded copy
+  description: Link against system @libargon2@ library (discovery via @pkg-config(1)@) rather than using embedded copy of @libargon2@
   default: False
   manual: True
 
@@ -36,13 +52,12 @@ library
   exposed-modules:     Crypto.Argon2.FFI
                        Crypto.Argon2
 
-  build-depends:       base         >= 4.8 && < 4.11
+  build-depends:       base         >= 4.8   && < 4.12
                      , bytestring   == 0.10.*
-                     , text         == 1.2.*
+                     , text-short   >= 0.1.2 && < 0.2
                      , transformers >= 0.4.2 && < 0.6
 
   hs-source-dirs:      src
-  default-language:    Haskell2010
 
   if flag(use-system-library)
     pkgconfig-depends: argon2
@@ -57,6 +72,8 @@ library
     include-dirs: phc-winner-argon2/src
                   phc-winner-argon2/include
 
+    cc-options: -O3
+
 test-suite tests
   default-language: Haskell2010
   type: exitcode-stdio-1.0
@@ -64,8 +81,12 @@ test-suite tests
   main-is: Tests.hs
   build-depends: argon2
                , base
-               , QuickCheck >= 2.0
-               , tasty-quickcheck
-               , tasty
                , bytestring
-               , text
+               , text-short
+
+               , QuickCheck       == 2.11.*
+               , tasty-quickcheck == 0.10.*
+               , tasty-hunit      == 0.10.*
+               , tasty            == 1.0.*
+
+  ghc-options: -threaded

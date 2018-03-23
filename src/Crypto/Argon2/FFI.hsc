@@ -1,5 +1,5 @@
-{-# LANGUAGE ForeignFunctionInterface #-}
 {-# LANGUAGE PatternSynonyms #-}
+{-# LANGUAGE Unsafe #-}
 
 module Crypto.Argon2.FFI where
 
@@ -9,53 +9,110 @@ module Crypto.Argon2.FFI where
 import Foreign
 import Foreign.C
 
-foreign import ccall unsafe "argon2.h argon2i_hash_encoded" argon2i_hash_encoded :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> Ptr a -> CSize -> Ptr b -> CSize -> CSize -> CString -> CSize -> IO (#type int)
+{-
 
-foreign import ccall unsafe "argon2.h argon2i_hash_raw" argon2i_hash_raw :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> Ptr a -> CSize -> Ptr b -> CSize -> Ptr c -> CSize -> IO (#type int)
+ * @param t_cost Number of iterations
+ * @param m_cost Sets memory usage to m_cost kibibytes
+ * @param parallelism Number of threads and compute lanes
+ * @param pwd Pointer to password
+ * @param pwdlen Password size in bytes
+ * @param salt Pointer to salt
+ * @param saltlen Salt size in bytes
+ * @param hash Buffer where to write the raw hash
+ * @param hashlen Desired length of the hash in bytes
+ * @param encoded Buffer where to write the encoded hash
+ * @param encodedlen Size of the buffer (thus max size of the encoded hash)
 
-foreign import ccall unsafe "argon2.h argon2d_hash_encoded" argon2d_hash_encoded :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> Ptr a -> CSize -> Ptr b -> CSize -> CSize -> CString -> CSize -> IO (#type int)
 
-foreign import ccall unsafe "argon2.h argon2d_hash_raw" argon2d_hash_raw :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> Ptr a -> CSize -> Ptr b -> CSize -> Ptr c -> CSize -> IO (#type int)
+int argon2_hash(const uint32_t t_cost, const uint32_t m_cost,
+                const uint32_t parallelism, const void *pwd,
+                const size_t pwdlen, const void *salt,
+                const size_t saltlen, void *hash,
+                const size_t hashlen, char *encoded,
+                const size_t encodedlen, argon2_type type,
+                const uint32_t version);
+
+int argon2_verify(const char *encoded, const void *pwd,
+                  const size_t pwdlen, argon2_type type);
+
+size_t argon2_encodedlen(uint32_t t_cost, uint32_t m_cost, uint32_t parallelism,
+                         uint32_t saltlen, uint32_t hashlen, argon2_type type) {
+
+-}
+
+foreign import ccall unsafe "argon2.h argon2_hash" argon2_hash
+    :: Word32 {- t_cost -}
+    -> Word32 {- m_cost -}
+    -> Word32 {- parallelism -}
+    -> Ptr a -> CSize {- pwd  + pwdlen -}
+    -> Ptr b -> CSize {- salt + saltlen -}
+    -> Ptr c -> CSize {- hash + hashlen -}
+    -> CString -> CSize {- encoded + encodedlen -}
+    -> Argon2_type
+    -> Argon2_version
+    -> IO CInt
+
+foreign import ccall unsafe "argon2.h argon2_verify" argon2_verify
+    :: CString -> Ptr a -> CSize -> Argon2_type -> IO CInt
+
+foreign import ccall unsafe "argon2.h argon2_encodedlen" argon2_encodedlen
+    :: Word32 -> Word32 -> Word32 -> Word32 -> Word32 -> Argon2_type -> IO CSize
+
 
 foreign import ccall unsafe "argon2.h argon2i_verify" argon2i_verify :: CString -> Ptr a -> CSize -> IO (#type int)
 
 foreign import ccall unsafe "argon2.h argon2d_verify" argon2d_verify :: CString -> Ptr a -> CSize -> IO (#type int)
 
-foreign import ccall unsafe "argon2.h argon2_encodedlen" argon2_encodedlen :: (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> (#type const uint32_t) -> IO CSize
+foreign import ccall unsafe "argon2.h argon2id_verify" argon2id_verify :: CString -> Ptr a -> CSize -> IO (#type int)
 
-pattern ARGON2_OK = (#const ARGON2_OK)
-pattern ARGON2_OUTPUT_PTR_NULL = (#const ARGON2_OUTPUT_PTR_NULL)
-pattern ARGON2_OUTPUT_TOO_SHORT = (#const ARGON2_OUTPUT_TOO_SHORT)
-pattern ARGON2_OUTPUT_TOO_LONG = (#const ARGON2_OUTPUT_TOO_LONG)
-pattern ARGON2_PWD_TOO_SHORT = (#const ARGON2_PWD_TOO_SHORT)
-pattern ARGON2_PWD_TOO_LONG = (#const ARGON2_PWD_TOO_LONG)
-pattern ARGON2_SALT_TOO_SHORT = (#const ARGON2_SALT_TOO_SHORT)
-pattern ARGON2_SALT_TOO_LONG = (#const ARGON2_SALT_TOO_LONG)
-pattern ARGON2_AD_TOO_SHORT = (#const ARGON2_AD_TOO_SHORT)
-pattern ARGON2_AD_TOO_LONG = (#const ARGON2_AD_TOO_LONG)
-pattern ARGON2_SECRET_TOO_SHORT = (#const ARGON2_SECRET_TOO_SHORT)
-pattern ARGON2_SECRET_TOO_LONG = (#const ARGON2_SECRET_TOO_LONG)
-pattern ARGON2_TIME_TOO_SMALL = (#const ARGON2_TIME_TOO_SMALL)
-pattern ARGON2_TIME_TOO_LARGE = (#const ARGON2_TIME_TOO_LARGE)
-pattern ARGON2_MEMORY_TOO_LITTLE = (#const ARGON2_MEMORY_TOO_LITTLE)
-pattern ARGON2_MEMORY_TOO_MUCH = (#const ARGON2_MEMORY_TOO_MUCH)
-pattern ARGON2_LANES_TOO_FEW = (#const ARGON2_LANES_TOO_FEW)
-pattern ARGON2_LANES_TOO_MANY = (#const ARGON2_LANES_TOO_MANY)
-pattern ARGON2_PWD_PTR_MISMATCH = (#const ARGON2_PWD_PTR_MISMATCH)
-pattern ARGON2_SALT_PTR_MISMATCH = (#const ARGON2_SALT_PTR_MISMATCH)
-pattern ARGON2_SECRET_PTR_MISMATCH = (#const ARGON2_SECRET_PTR_MISMATCH)
-pattern ARGON2_AD_PTR_MISMATCH = (#const ARGON2_AD_PTR_MISMATCH)
-pattern ARGON2_MEMORY_ALLOCATION_ERROR = (#const ARGON2_MEMORY_ALLOCATION_ERROR)
-pattern ARGON2_FREE_MEMORY_CBK_NULL = (#const ARGON2_FREE_MEMORY_CBK_NULL)
+
+type Argon2_type = (#type argon2_type)
+pattern Argon2_d  = (#const Argon2_d)
+pattern Argon2_i  = (#const Argon2_i)
+pattern Argon2_id = (#const Argon2_id)
+
+type Argon2_version = Word32 -- NB, not (#type argon2_version)
+pattern ARGON2_VERSION_10 = (#const ARGON2_VERSION_10)
+pattern ARGON2_VERSION_13 = (#const ARGON2_VERSION_13)
+pattern ARGON2_VERSION_NUMBER = (#const ARGON2_VERSION_NUMBER)
+
+-- argon2_error_codes
+pattern ARGON2_OK                       = (#const ARGON2_OK)
+pattern ARGON2_OUTPUT_PTR_NULL          = (#const ARGON2_OUTPUT_PTR_NULL)
+pattern ARGON2_OUTPUT_TOO_SHORT         = (#const ARGON2_OUTPUT_TOO_SHORT)
+pattern ARGON2_OUTPUT_TOO_LONG          = (#const ARGON2_OUTPUT_TOO_LONG)
+pattern ARGON2_PWD_TOO_SHORT            = (#const ARGON2_PWD_TOO_SHORT)
+pattern ARGON2_PWD_TOO_LONG             = (#const ARGON2_PWD_TOO_LONG)
+pattern ARGON2_SALT_TOO_SHORT           = (#const ARGON2_SALT_TOO_SHORT)
+pattern ARGON2_SALT_TOO_LONG            = (#const ARGON2_SALT_TOO_LONG)
+pattern ARGON2_AD_TOO_SHORT             = (#const ARGON2_AD_TOO_SHORT)
+pattern ARGON2_AD_TOO_LONG              = (#const ARGON2_AD_TOO_LONG)
+pattern ARGON2_SECRET_TOO_SHORT         = (#const ARGON2_SECRET_TOO_SHORT)
+pattern ARGON2_SECRET_TOO_LONG          = (#const ARGON2_SECRET_TOO_LONG)
+pattern ARGON2_TIME_TOO_SMALL           = (#const ARGON2_TIME_TOO_SMALL)
+pattern ARGON2_TIME_TOO_LARGE           = (#const ARGON2_TIME_TOO_LARGE)
+pattern ARGON2_MEMORY_TOO_LITTLE        = (#const ARGON2_MEMORY_TOO_LITTLE)
+pattern ARGON2_MEMORY_TOO_MUCH          = (#const ARGON2_MEMORY_TOO_MUCH)
+pattern ARGON2_LANES_TOO_FEW            = (#const ARGON2_LANES_TOO_FEW)
+pattern ARGON2_LANES_TOO_MANY           = (#const ARGON2_LANES_TOO_MANY)
+pattern ARGON2_PWD_PTR_MISMATCH         = (#const ARGON2_PWD_PTR_MISMATCH)
+pattern ARGON2_SALT_PTR_MISMATCH        = (#const ARGON2_SALT_PTR_MISMATCH)
+pattern ARGON2_SECRET_PTR_MISMATCH      = (#const ARGON2_SECRET_PTR_MISMATCH)
+pattern ARGON2_AD_PTR_MISMATCH          = (#const ARGON2_AD_PTR_MISMATCH)
+pattern ARGON2_MEMORY_ALLOCATION_ERROR  = (#const ARGON2_MEMORY_ALLOCATION_ERROR)
+pattern ARGON2_FREE_MEMORY_CBK_NULL     = (#const ARGON2_FREE_MEMORY_CBK_NULL)
 pattern ARGON2_ALLOCATE_MEMORY_CBK_NULL = (#const ARGON2_ALLOCATE_MEMORY_CBK_NULL)
-pattern ARGON2_INCORRECT_PARAMETER = (#const ARGON2_INCORRECT_PARAMETER)
-pattern ARGON2_INCORRECT_TYPE = (#const ARGON2_INCORRECT_TYPE)
-pattern ARGON2_OUT_PTR_MISMATCH = (#const ARGON2_OUT_PTR_MISMATCH)
-pattern ARGON2_THREADS_TOO_FEW = (#const ARGON2_THREADS_TOO_FEW)
-pattern ARGON2_THREADS_TOO_MANY = (#const ARGON2_THREADS_TOO_MANY)
-pattern ARGON2_MISSING_ARGS = (#const ARGON2_MISSING_ARGS)
-pattern ARGON2_ENCODING_FAIL = (#const ARGON2_ENCODING_FAIL)
-pattern ARGON2_DECODING_FAIL = (#const ARGON2_DECODING_FAIL)
+pattern ARGON2_INCORRECT_PARAMETER      = (#const ARGON2_INCORRECT_PARAMETER)
+pattern ARGON2_INCORRECT_TYPE           = (#const ARGON2_INCORRECT_TYPE)
+pattern ARGON2_OUT_PTR_MISMATCH         = (#const ARGON2_OUT_PTR_MISMATCH)
+pattern ARGON2_THREADS_TOO_FEW          = (#const ARGON2_THREADS_TOO_FEW)
+pattern ARGON2_THREADS_TOO_MANY         = (#const ARGON2_THREADS_TOO_MANY)
+pattern ARGON2_MISSING_ARGS             = (#const ARGON2_MISSING_ARGS)
+pattern ARGON2_ENCODING_FAIL            = (#const ARGON2_ENCODING_FAIL)
+pattern ARGON2_DECODING_FAIL            = (#const ARGON2_DECODING_FAIL)
+pattern ARGON2_THREAD_FAIL              = (#const ARGON2_THREAD_FAIL)
+pattern ARGON2_DECODING_LENGTH_FAIL     = (#const ARGON2_DECODING_LENGTH_FAIL)
+pattern ARGON2_VERIFY_MISMATCH          = (#const ARGON2_VERIFY_MISMATCH)
 
 pattern ARGON2_MIN_LANES = (#const ARGON2_MIN_LANES)
 pattern ARGON2_MAX_LANES = (#const ARGON2_MAX_LANES)
@@ -88,8 +145,14 @@ pattern ARGON2_MAX_SALT_LENGTH = (#const ARGON2_MAX_SALT_LENGTH)
 pattern ARGON2_MIN_SECRET = (#const ARGON2_MIN_SECRET)
 pattern ARGON2_MAX_SECRET = (#const ARGON2_MAX_SECRET)
 
+{-
+
+/* Global flag to determine if we are wiping internal memory buffers. This flag
+ * is defined in core.c and deafults to 1 (wipe internal memory). */
+extern int FLAG_clear_internal_memory;
+
 pattern ARGON2_FLAG_CLEAR_PASSWORD = (#const ARGON2_FLAG_CLEAR_PASSWORD)
-pattern ARGON2_FLAG_CLEAR_SECRET = (#const ARGON2_FLAG_CLEAR_SECRET)
--- This got removed, see 78d2a579fec204d7f50ecbe79e71ca33b6a60c1c
--- pattern ARGON2_FLAG_CLEAR_MEMORY = (#const ARGON2_FLAG_CLEAR_MEMORY)
-pattern ARGON2_DEFAULT_FLAGS = (#const ARGON2_DEFAULT_FLAGS)
+pattern ARGON2_FLAG_CLEAR_SECRET   = (#const ARGON2_FLAG_CLEAR_SECRET)
+pattern ARGON2_DEFAULT_FLAGS       = (#const ARGON2_DEFAULT_FLAGS)
+
+-}

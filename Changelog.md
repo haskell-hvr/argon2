@@ -1,3 +1,19 @@
+# 1.3.0
+
+- This represents a major rewrite/refactoring of this package.
+
+- Add support for generating version 1.0 hashes.
+
+- Add support for controlling length of generated hash.
+
+- Add support for hybrid `Argon2id` variant.
+
+- Defaults in `defaultHashOptions` changed to the current ones from the upstream `argon2` executable.
+
+- Embedded `phc-winner-argon2` version updated to release `20171227`.
+
+- Fix potential memory leak.
+
 # 1.2.0
 
 - Updated embedded phc-winner-argon2, so that hashes are generated
