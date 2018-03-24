@@ -1,4 +1,4 @@
-# 1.3.0
+# 1.3.0.0
 
 - This represents a major rewrite/refactoring of this package.
 
@@ -13,6 +13,8 @@
 - Embedded `phc-winner-argon2` version updated to release `20171227`.
 
 - Mangle names of global symbols from `phc-winner-argon2` to reduce risk of symbol clashes at the C ABI level.
+
+- Add support for `libargon2`'s optimised C routines on x86_64 (can be disabled via new `non-optimised-c` cabal flag).
 
 - Fix potential memory leak.
 
