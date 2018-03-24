@@ -44,7 +44,6 @@ import           Data.Typeable
 import           Foreign
 import           Foreign.C
 import           GHC.Generics      (Generic)
-import           Numeric.Natural
 import           System.IO.Unsafe  (unsafePerformIO)
 
 -- | Which variant of Argon2 to use. You should choose the variant that is most
@@ -105,7 +104,7 @@ data HashOptions =
 defaultHashOptions :: HashOptions
 defaultHashOptions = HashOptions
     { hashIterations  = 3
-    , hashMemory      = 2 ^ 12 -- 4 MiB
+    , hashMemory      = 2 ^ (12 :: Int) -- 4 MiB
     , hashParallelism = 1
     , hashVariant     = Argon2i
     , hashVersion     = Argon2Version13
@@ -154,8 +153,6 @@ data Argon2Exception
 
 instance Exception Argon2Exception
 
-type Argon2Encoded = Word32 -> Word32 -> Word32 -> CString -> CSize -> CString -> CSize -> CSize -> CString -> CSize -> IO Int32
-
 hashEncoded' :: HashOptions
              -> BS.ByteString
              -> BS.ByteString
@@ -201,7 +198,6 @@ hashEncoded' options@HashOptions{..} password salt = do
                     Argon2Version10 -> FFI.ARGON2_VERSION_10
                     Argon2Version13 -> FFI.ARGON2_VERSION_13
 
-type Argon2Unencoded = Word32 -> Word32 -> Word32 -> CString -> CSize -> CString -> CSize -> CString -> CSize -> IO Int32
 
 hash' :: HashOptions
       -> BS.ByteString
@@ -218,7 +214,7 @@ hash' options@HashOptions{..} password salt =
                    password'
                    passwordLen
                    salt'
-                   (fromIntegral saltLen)
+                   saltLen
                    out
                    (fromIntegral hashLength)
                    nullPtr
