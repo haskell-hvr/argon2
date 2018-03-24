@@ -18,6 +18,8 @@
 #ifndef ARGON2_THREAD_H
 #define ARGON2_THREAD_H
 
+#include "hs_argon2_mangling.h"
+
 #if !defined(ARGON2_NO_THREADS)
 
 /*

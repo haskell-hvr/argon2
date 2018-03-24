@@ -25,12 +25,13 @@ license-files:       LICENSE
 
 author:              Ollie Charles, Herbert Valerio Riedel
 maintainer:          Herbert Valerio Riedel <hvr@gnu.org>
-homepage:            https://github.com/hvr/argon2/issues
+bug-reports:         https://github.com/hvr/argon2/issues
 category:            Cryptography
 build-type:          Simple
 extra-source-files:  Changelog.md
 
                      phc-winner-argon2/include/argon2.h
+                     phc-winner-argon2/include/hs_argon2_mangling.h
                      phc-winner-argon2/src/blake2/blake2-impl.h
                      phc-winner-argon2/src/blake2/blake2.h
                      phc-winner-argon2/src/blake2/blamka-round-ref.h
@@ -60,8 +61,10 @@ library
   hs-source-dirs:      src
 
   if flag(use-system-library)
+    cpp-options: -DUSE_SYSTEM_ARGON2=1
     pkgconfig-depends: argon2
   else
+    cpp-options: -DUSE_SYSTEM_ARGON2=0
     c-sources: phc-winner-argon2/src/argon2.c
                phc-winner-argon2/src/core.c
                phc-winner-argon2/src/blake2/blake2b.c

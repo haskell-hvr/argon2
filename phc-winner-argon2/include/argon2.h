@@ -21,6 +21,7 @@
 #include <stdint.h>
 #include <stddef.h>
 #include <limits.h>
+#include "hs_argon2_mangling.h"
 
 #if defined(__cplusplus)
 extern "C" {

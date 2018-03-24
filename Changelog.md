@@ -12,6 +12,8 @@
 
 - Embedded `phc-winner-argon2` version updated to release `20171227`.
 
+- Mangle names of global symbols from `phc-winner-argon2` to reduce risk of symbol clashes at the C ABI level.
+
 - Fix potential memory leak.
 
 # 1.2.0

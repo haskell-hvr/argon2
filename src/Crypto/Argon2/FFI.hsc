@@ -40,7 +40,17 @@ size_t argon2_encodedlen(uint32_t t_cost, uint32_t m_cost, uint32_t parallelism,
 
 -}
 
-foreign import ccall unsafe "argon2.h argon2_hash" argon2_hash
+#if !defined(USE_SYSTEM_ARGON2)
+# error USE_SYSTEM_ARGON2 undefined
+#endif
+
+foreign import ccall unsafe
+#if USE_SYSTEM_ARGON2
+    "argon2.h argon2_hash"
+#else
+    "argon2.h hs_argon2__argon2_hash"
+#endif
+    argon2_hash
     :: Word32 {- t_cost -}
     -> Word32 {- m_cost -}
     -> Word32 {- parallelism -}
@@ -52,19 +62,23 @@ foreign import ccall unsafe "argon2.h argon2_hash" argon2_hash
     -> Argon2_version
     -> IO CInt
 
-foreign import ccall unsafe "argon2.h argon2_verify" argon2_verify
+foreign import ccall unsafe
+#if USE_SYSTEM_ARGON2
+    "argon2.h argon2_verify"
+#else
+    "argon2.h hs_argon2__argon2_verify"
+#endif
+    argon2_verify
     :: CString -> Ptr a -> CSize -> Argon2_type -> IO CInt
 
-foreign import ccall unsafe "argon2.h argon2_encodedlen" argon2_encodedlen
+foreign import ccall unsafe
+#if USE_SYSTEM_ARGON2
+    "argon2.h argon2_encodedlen"
+#else
+    "argon2.h hs_argon2__argon2_encodedlen"
+#endif
+    argon2_encodedlen
     :: Word32 -> Word32 -> Word32 -> Word32 -> Word32 -> Argon2_type -> IO CSize
-
-
-foreign import ccall unsafe "argon2.h argon2i_verify" argon2i_verify :: CString -> Ptr a -> CSize -> IO (#type int)
-
-foreign import ccall unsafe "argon2.h argon2d_verify" argon2d_verify :: CString -> Ptr a -> CSize -> IO (#type int)
-
-foreign import ccall unsafe "argon2.h argon2id_verify" argon2id_verify :: CString -> Ptr a -> CSize -> IO (#type int)
-
 
 type Argon2_type = (#type argon2_type)
 pattern Argon2_d  = (#const Argon2_d)
