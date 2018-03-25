@@ -62,7 +62,6 @@ library
   build-depends:       base         >= 4.8   && < 4.12
                      , bytestring   == 0.10.*
                      , text-short   >= 0.1.2 && < 0.2
-                     , transformers >= 0.4.2 && < 0.6
 
   hs-source-dirs:      src
 
@@ -99,7 +98,6 @@ test-suite tests
   build-depends: argon2
                , base
                , bytestring
-               , text-short
 
                , QuickCheck       == 2.11.*
                , tasty-quickcheck == 0.10.*
