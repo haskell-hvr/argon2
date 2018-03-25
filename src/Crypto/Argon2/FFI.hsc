@@ -1,6 +1,14 @@
 {-# LANGUAGE PatternSynonyms #-}
 {-# LANGUAGE Unsafe #-}
 
+-- |
+-- Module      : Crypto.Argon2.FFI
+-- License     : BSD3
+-- Maintainer  : hvr@gnu.org
+--
+-- This module provides low-level access to parts of the C API
+--
+-- Prefer the "Crypto.Argon2" API when possible.
 module Crypto.Argon2.FFI where
 
 #include <argon2.h>

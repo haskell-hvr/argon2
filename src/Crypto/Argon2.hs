@@ -7,6 +7,10 @@
 
 {-|
 
+Module      : Crypto.Argon2
+License     : BSD3
+Maintainer  : hvr@gnu.org
+
 "Crypto.Argon2" provides bindings to the
 <https://github.com/P-H-C/phc-winner-argon2 reference implementation> of Argon2,
 the password-hashing function that won the
@@ -33,7 +37,7 @@ module Crypto.Argon2
     , Argon2Variant(..)
     , Argon2Version(..)
     , defaultHashOptions
-      -- * Exceptions
+      -- * Status codes
     , Argon2Status(..)
     ) where
 
@@ -79,7 +83,7 @@ toArgon2Ver Argon2Version10 = FFI.ARGON2_VERSION_10
 toArgon2Ver Argon2Version13 = FFI.ARGON2_VERSION_13
 
 -- | Parameters that can be adjusted to change the runtime performance of the
--- hashing.
+-- hashing. See also 'defaultHashOptions'.
 data HashOptions =
   HashOptions { hashIterations  :: !Word32 -- ^ The time cost, which defines the amount of computation realized and therefore the execution time, given in number of iterations.
                                          --
@@ -106,14 +110,17 @@ data HashOptions =
 -- @
 -- 'defaultHashOptions' :: 'HashOptions'
 -- 'defaultHashOptions' =
---   'HashOptions' { 'hashIterations' = 3
---               , 'hashMemory' = 2 ^ 12 -- 4 MiB
+--   'HashOptions' { 'hashIterations'  = 3
+--               , 'hashMemory'      = 2 ^ 12 -- 4 MiB
 --               , 'hashParallelism' = 1
---               , 'hashVariant' = 'Argon2i'
---               , 'hashVersion' = 'Argon2V13'
---               , 'hashLength'  = 2 ^ 5 -- 32 bytes
+--               , 'hashVariant'     = 'Argon2i'
+--               , 'hashVersion'     = 'Argon2Version13'
+--               , 'hashLength'      = 2 ^ 5 -- 32 bytes
 --               }
 -- @
+--
+-- For more information on how to select these parameters for your application, see section 6.4 of the [Argon2 specification](https://github.com/P-H-C/phc-winner-argon2/blob/master/argon2-specs.pdf).
+--
 defaultHashOptions :: HashOptions
 defaultHashOptions = HashOptions
     { hashIterations  = 3
@@ -125,15 +132,17 @@ defaultHashOptions = HashOptions
     }
 
 -- | Encode a password with a given salt and 'HashOptions' and produce a textual
--- encoding of the result.
+-- encoding according to the [PHC string format](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md) of the result.
+--
+-- Use 'verifyEncoded' to verify.
 hashEncoded :: HashOptions   -- ^ Options pertaining to how expensive the hash is to calculate.
             -> BS.ByteString -- ^ The password to hash. Must be less than 4294967295 bytes.
             -> BS.ByteString -- ^ The salt to use when hashing. Must be less than 4294967295 bytes.
             -> Either Argon2Status TS.ShortText  -- ^ The encoded password hash (or error code in case of failure).
 hashEncoded options password salt = unsafePerformIO $ try $ hashEncoded' options password salt
 
--- | Encode a password with a given salt and 'HashOptions' and produce a stream
--- of bytes.
+-- | Encode a password with a given salt and 'HashOptions' and produce a binary stream
+-- of bytes (of size 'hashLength').
 hash :: HashOptions -- ^ Options pertaining to how expensive the hash is to calculate.
      -> BS.ByteString -- ^ The password to hash. Must be less than 4294967295 bytes.
      -> BS.ByteString -- ^ The salt to use when hashing. Must be less than 4294967295 bytes.
@@ -312,7 +321,7 @@ handleSuccessCode res = case toArgon2Status res of
 
 -- | Verify that a given password could result in a given hash output.
 -- Automatically determines the correct 'HashOptions' based on the
--- encoded hash (as produced by 'hashEncoded').
+-- encoded hash (using the [PHC string format](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md) as produced by 'hashEncoded').
 --
 -- Returns 'Argon2Ok' on succesful verification. If decoding is
 -- succesful but the password mismatches, 'Argon2VerifyMismatch' is
