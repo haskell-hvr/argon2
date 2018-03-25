@@ -17,41 +17,39 @@ module Crypto.Argon2.FFI where
 import Foreign
 import Foreign.C
 
-{-
-
- * @param t_cost Number of iterations
- * @param m_cost Sets memory usage to m_cost kibibytes
- * @param parallelism Number of threads and compute lanes
- * @param pwd Pointer to password
- * @param pwdlen Password size in bytes
- * @param salt Pointer to salt
- * @param saltlen Salt size in bytes
- * @param hash Buffer where to write the raw hash
- * @param hashlen Desired length of the hash in bytes
- * @param encoded Buffer where to write the encoded hash
- * @param encodedlen Size of the buffer (thus max size of the encoded hash)
-
-
-int argon2_hash(const uint32_t t_cost, const uint32_t m_cost,
-                const uint32_t parallelism, const void *pwd,
-                const size_t pwdlen, const void *salt,
-                const size_t saltlen, void *hash,
-                const size_t hashlen, char *encoded,
-                const size_t encodedlen, argon2_type type,
-                const uint32_t version);
-
-int argon2_verify(const char *encoded, const void *pwd,
-                  const size_t pwdlen, argon2_type type);
-
-size_t argon2_encodedlen(uint32_t t_cost, uint32_t m_cost, uint32_t parallelism,
-                         uint32_t saltlen, uint32_t hashlen, argon2_type type) {
-
--}
 
 #if !defined(USE_SYSTEM_ARGON2)
 # error USE_SYSTEM_ARGON2 undefined
 #endif
 
+-- * @libargon2@ functions
+
+-- | Compute Argon2 hash
+--
+-- > int argon2_hash(const uint32_t t_cost, const uint32_t m_cost,
+-- >                 const uint32_t parallelism, const void *pwd,
+-- >                 const size_t pwdlen, const void *salt,
+-- >                 const size_t saltlen, void *hash,
+-- >                 const size_t hashlen, char *encoded,
+-- >                 const size_t encodedlen, argon2_type type,
+-- >                 const uint32_t version);
+--
+-- === __Parameters__
+--
+--  [t_cost] Number of iterations
+--  [m_cost] Sets memory usage to m_cost kibibytes
+--  [parallelism] Number of threads and compute lanes
+--  [pwd] Pointer to password
+--  [pwdlen] Password size in bytes
+--  [salt] Pointer to salt
+--  [saltlen] Salt size in bytes
+--  [hash] Buffer where to write the raw hash
+--  [hashlen] Desired length of the hash in bytes
+--  [encoded] Buffer where to write the encoded hash
+--  [encodedlen] Size of the buffer (thus max size of the encoded hash)
+--  [type] Variant of Argon2 hash
+--  [version] Version of Argon2 specification
+--
 foreign import ccall unsafe
 #if USE_SYSTEM_ARGON2
     "argon2.h argon2_hash"
@@ -70,6 +68,18 @@ foreign import ccall unsafe
     -> Argon2_version
     -> IO CInt
 
+-- | Verify encoded hash
+--
+-- > int argon2_verify(const char *encoded, const void *pwd,
+-- >                   const size_t pwdlen, argon2_type type);
+--
+-- === __Parameters__
+--
+--  [encoded] Pointer to zero-terminated encoded hash
+--  [pwd] Pointer to password
+--  [pwdlen] Password size in bytes
+--  [type] Variant of Argon2 hash
+--
 foreign import ccall unsafe
 #if USE_SYSTEM_ARGON2
     "argon2.h argon2_verify"
@@ -79,6 +89,21 @@ foreign import ccall unsafe
     argon2_verify
     :: CString -> Ptr a -> CSize -> Argon2_type -> IO CInt
 
+-- | Compute size of encoded hash
+--
+-- > size_t argon2_encodedlen(uint32_t t_cost, uint32_t m_cost, uint32_t parallelism,
+-- >                          uint32_t saltlen, uint32_t hashlen, argon2_type type);
+--
+-- === __Parameters__
+--
+--  [t_cost] Number of iterations
+--  [m_cost] Sets memory usage to m_cost kibibytes
+--  [parallelism] Number of threads and compute lanes
+--  [salt] Pointer to salt
+--  [saltlen] Salt size in bytes
+--  [hashlen] Desired length of the hash in bytes
+--  [type] Variant of Argon2 hash
+--
 foreign import ccall unsafe
 #if USE_SYSTEM_ARGON2
     "argon2.h argon2_encodedlen"
@@ -88,15 +113,23 @@ foreign import ccall unsafe
     argon2_encodedlen
     :: Word32 -> Word32 -> Word32 -> Word32 -> Word32 -> Argon2_type -> IO CSize
 
+-- * @libargon2@ API typedefs
+
+-- ** @argon2_type@
+
 type Argon2_type = (#type argon2_type)
 pattern Argon2_d  = (#const Argon2_d)
 pattern Argon2_i  = (#const Argon2_i)
 pattern Argon2_id = (#const Argon2_id)
 
+-- ** @argon2_version@
+
 type Argon2_version = Word32 -- NB, not (#type argon2_version)
 pattern ARGON2_VERSION_10 = (#const ARGON2_VERSION_10)
 pattern ARGON2_VERSION_13 = (#const ARGON2_VERSION_13)
 pattern ARGON2_VERSION_NUMBER = (#const ARGON2_VERSION_NUMBER)
+
+-- ** @argon2_error_codes@
 
 -- argon2_error_codes
 pattern ARGON2_OK                       = (#const ARGON2_OK)
@@ -135,6 +168,8 @@ pattern ARGON2_DECODING_FAIL            = (#const ARGON2_DECODING_FAIL)
 pattern ARGON2_THREAD_FAIL              = (#const ARGON2_THREAD_FAIL)
 pattern ARGON2_DECODING_LENGTH_FAIL     = (#const ARGON2_DECODING_LENGTH_FAIL)
 pattern ARGON2_VERIFY_MISMATCH          = (#const ARGON2_VERIFY_MISMATCH)
+
+-- * @libargon2@ limits & constants
 
 pattern ARGON2_MIN_LANES = (#const ARGON2_MIN_LANES)
 pattern ARGON2_MAX_LANES = (#const ARGON2_MAX_LANES)
@@ -178,3 +213,4 @@ pattern ARGON2_FLAG_CLEAR_SECRET   = (#const ARGON2_FLAG_CLEAR_SECRET)
 pattern ARGON2_DEFAULT_FLAGS       = (#const ARGON2_DEFAULT_FLAGS)
 
 -}
+
