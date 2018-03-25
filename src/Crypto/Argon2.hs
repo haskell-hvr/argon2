@@ -142,6 +142,14 @@ defaultHashOptions = HashOptions
     , hashLength      = 32
     }
 
+-- | Encode a password with a given salt and 'HashOptions' and produce a binary stream
+-- of bytes (of size 'hashLength').
+hash :: HashOptions -- ^ Options pertaining to how expensive the hash is to calculate.
+     -> BS.ByteString -- ^ The password to hash. Must be less than 4294967295 bytes.
+     -> BS.ByteString -- ^ The salt to use when hashing. Must be less than 4294967295 bytes.
+     -> Either Argon2Status BS.ByteString -- ^ The un-encoded password hash (or error code in case of failure).
+hash options password salt = unsafePerformIO $ try $ hash' options password salt
+
 -- | Encode a password with a given salt and 'HashOptions' and produce a textual
 -- encoding according to the [PHC string format](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md) of the result.
 --
@@ -152,13 +160,26 @@ hashEncoded :: HashOptions   -- ^ Options pertaining to how expensive the hash i
             -> Either Argon2Status TS.ShortText  -- ^ The encoded password hash (or error code in case of failure).
 hashEncoded options password salt = unsafePerformIO $ try $ hashEncoded' options password salt
 
--- | Encode a password with a given salt and 'HashOptions' and produce a binary stream
--- of bytes (of size 'hashLength').
-hash :: HashOptions -- ^ Options pertaining to how expensive the hash is to calculate.
-     -> BS.ByteString -- ^ The password to hash. Must be less than 4294967295 bytes.
-     -> BS.ByteString -- ^ The salt to use when hashing. Must be less than 4294967295 bytes.
-     -> Either Argon2Status BS.ByteString -- ^ The un-encoded password hash (or error code in case of failure).
-hash options password salt = unsafePerformIO $ try $ hash' options password salt
+-- | Verify that a given password could result in a given hash output.
+-- Automatically determines the correct 'HashOptions' based on the
+-- encoded hash (using the [PHC string format](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md) as produced by 'hashEncoded').
+--
+-- Returns 'Argon2Ok' on successful verification. If decoding is
+-- successful but the password mismatches, 'Argon2VerifyMismatch' is
+-- returned; if decoding fails, the respective 'Argon2Status' code is
+-- returned.
+verifyEncoded :: TS.ShortText -> BS.ByteString -> Argon2Status
+verifyEncoded encoded password
+  -- c.f. https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md
+  | "$argon2id$" `TS.isPrefixOf` encoded = unsafePerformIO $ go FFI.Argon2_id
+  | "$argon2i$"  `TS.isPrefixOf` encoded = unsafePerformIO $ go FFI.Argon2_i
+  | "$argon2d$"  `TS.isPrefixOf` encoded = unsafePerformIO $ go FFI.Argon2_d
+  | otherwise                            = Argon2DecodingFail
+  where
+    go v = BS.useAsCString password $ \pwd ->
+             BS.useAsCString (TS.toByteString encoded) $ \enc ->
+               toArgon2Status <$> FFI.argon2_verify enc pwd (fromIntegral (BS.length password)) v
+
 
 -- | Returned status code for Argon2 functions.
 --
@@ -332,22 +353,3 @@ handleSuccessCode res = case toArgon2Status res of
                           Argon2Ok -> return ()
                           nok      -> throwIO nok
 
--- | Verify that a given password could result in a given hash output.
--- Automatically determines the correct 'HashOptions' based on the
--- encoded hash (using the [PHC string format](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md) as produced by 'hashEncoded').
---
--- Returns 'Argon2Ok' on successful verification. If decoding is
--- successful but the password mismatches, 'Argon2VerifyMismatch' is
--- returned; if decoding fails, the respective 'Argon2Status' code is
--- returned.
-verifyEncoded :: TS.ShortText -> BS.ByteString -> Argon2Status
-verifyEncoded encoded password
-  -- c.f. https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md
-  | "$argon2id$" `TS.isPrefixOf` encoded = unsafePerformIO $ go FFI.Argon2_id
-  | "$argon2i$"  `TS.isPrefixOf` encoded = unsafePerformIO $ go FFI.Argon2_i
-  | "$argon2d$"  `TS.isPrefixOf` encoded = unsafePerformIO $ go FFI.Argon2_d
-  | otherwise                            = Argon2DecodingFail
-  where
-    go v = BS.useAsCString password $ \pwd ->
-             BS.useAsCString (TS.toByteString encoded) $ \enc ->
-               toArgon2Status <$> FFI.argon2_verify enc pwd (fromIntegral (BS.length password)) v
