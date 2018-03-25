@@ -23,14 +23,17 @@ supplying a particular set of 'HashOptions' - 'defaultHashOptions' should provid
 a good starting point. See 'HashOptions' for more documentation on the particular
 parameters that can be adjusted.
 
-For access directly to the C interface, see "Crypto.Argon2.FFI".
+For (unsafe) access directly to the C interface, see "Crypto.Argon2.FFI".
 
 -}
 module Crypto.Argon2
-    ( -- * Computing hashes
-      hashEncoded
-    , hash
-      -- * Verification
+    ( -- * Hash computation & verification
+      -- ** Binary hash representation
+      hash
+      -- ** ASCII-encoded representation
+      --
+      -- | These operations use the [PHC string format](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md), a [crypt(3)](https://en.wikipedia.org/wiki/Crypt_\(C\))-like serialization format for password hashes.
+    , hashEncoded
     , verifyEncoded
       -- * Configuring hashing
     , HashOptions(..)
@@ -185,7 +188,7 @@ data Argon2Status
     | Argon2MemoryAllocationError         -- ^ Memory allocation error
     | Argon2FreeMemoryCbkNull             -- ^ The free memory callback is @NULL@
     | Argon2AllocateMemoryCbkNull         -- ^ The allocate memory callback is @NULL@
-    | Argon2IncorrectParameter            -- ^ Argon2_Context context is @NULL@
+    | Argon2IncorrectParameter            -- ^ @Argon2_Context@ context is @NULL@
     | Argon2IncorrectType                 -- ^ There is no such version of Argon2
     | Argon2OutPtrMismatch                -- ^ Output pointer mismatch
     | Argon2ThreadsTooFew                 -- ^ Not enough threads
@@ -197,7 +200,7 @@ data Argon2Status
     | Argon2DecodingLengthFail            -- ^ Some of encoded parameters are too long or too short
     | Argon2VerifyMismatch                -- ^ The password does not match the supplied hash
 
-    | Argon2InternalError                 -- ^ Internal error or unrecognised status code
+    | Argon2InternalError                 -- ^ Internal error or unrecognized status code
     deriving (Typeable,Eq,Ord,Read,Show,Enum,Bounded)
 
 instance Exception Argon2Status
@@ -323,8 +326,8 @@ handleSuccessCode res = case toArgon2Status res of
 -- Automatically determines the correct 'HashOptions' based on the
 -- encoded hash (using the [PHC string format](https://github.com/P-H-C/phc-string-format/blob/master/phc-sf-spec.md) as produced by 'hashEncoded').
 --
--- Returns 'Argon2Ok' on succesful verification. If decoding is
--- succesful but the password mismatches, 'Argon2VerifyMismatch' is
+-- Returns 'Argon2Ok' on successful verification. If decoding is
+-- successful but the password mismatches, 'Argon2VerifyMismatch' is
 -- returned; if decoding fails, the respective 'Argon2Status' code is
 -- returned.
 verifyEncoded :: TS.ShortText -> BS.ByteString -> Argon2Status
