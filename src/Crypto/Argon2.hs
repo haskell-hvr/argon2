@@ -1,3 +1,4 @@
+{-# LANGUAGE BangPatterns       #-}
 {-# LANGUAGE DeriveDataTypeable #-}
 {-# LANGUAGE DeriveGeneric      #-}
 {-# LANGUAGE LambdaCase         #-}
@@ -44,6 +45,7 @@ module Crypto.Argon2
     , Argon2Status(..)
     ) where
 
+import           Control.DeepSeq   (NFData (rnf))
 import           Control.Exception
 import qualified Crypto.Argon2.FFI as FFI
 import qualified Data.ByteString   as BS
@@ -70,6 +72,8 @@ data Argon2Variant
              -- time-memory tradeoffs.
   deriving (Eq,Ord,Read,Show,Bounded,Generic,Typeable,Enum)
 
+instance NFData Argon2Variant where rnf !_ = ()
+
 toArgon2Type :: Argon2Variant -> FFI.Argon2_type
 toArgon2Type Argon2i  = FFI.Argon2_i
 toArgon2Type Argon2d  = FFI.Argon2_d
@@ -80,6 +84,8 @@ data Argon2Version
   = Argon2Version10 -- ^ Version 1.0 (deprecated)
   | Argon2Version13 -- ^ Version 1.3 (See [this announcment](https://www.ietf.org/mail-archive/web/cfrg/current/msg07948.html) for more details)
   deriving (Eq,Ord,Read,Show,Bounded,Generic,Typeable,Enum)
+
+instance NFData Argon2Version where rnf !_ = ()
 
 toArgon2Ver :: Argon2Version -> FFI.Argon2_version
 toArgon2Ver Argon2Version10 = FFI.ARGON2_VERSION_10
@@ -107,6 +113,8 @@ data HashOptions =
               , hashLength      :: !Word32        -- ^ Desired length of hash expressed in octets.
               }
   deriving (Eq,Ord,Read,Show,Bounded,Generic,Typeable)
+
+instance NFData HashOptions where rnf !_ = ()
 
 -- | A set of default 'HashOptions', taken from the @argon2@ executable.
 --
@@ -202,6 +210,8 @@ data Argon2Status
 
     | Argon2InternalError                 -- ^ Internal error or unrecognized status code
     deriving (Typeable,Eq,Ord,Read,Show,Enum,Bounded)
+
+instance NFData Argon2Status where rnf !_ = ()
 
 instance Exception Argon2Status
 

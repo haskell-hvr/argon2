@@ -8,6 +8,8 @@
 
 - Add support for hybrid `Argon2id` variant.
 
+- Add `NFData` instances.
+
 - Defaults in `defaultHashOptions` changed to the current ones from the upstream `argon2` executable.
 
 - Replace `Argon2Exception` by more direct `Argon2Status` enumeration; report failures purely via `Either` rather than by throwing as exceptions.
