@@ -50,7 +50,7 @@ import Foreign.C
 --  [type] Variant of Argon2 hash
 --  [version] Version of Argon2 specification
 --
-foreign import ccall unsafe
+foreign import ccall safe
 #if USE_SYSTEM_ARGON2
     "argon2.h argon2_hash"
 #else
@@ -80,7 +80,7 @@ foreign import ccall unsafe
 --  [pwdlen] Password size in bytes
 --  [type] Variant of Argon2 hash
 --
-foreign import ccall unsafe
+foreign import ccall safe
 #if USE_SYSTEM_ARGON2
     "argon2.h argon2_verify"
 #else
