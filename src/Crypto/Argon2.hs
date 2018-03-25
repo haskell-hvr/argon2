@@ -26,6 +26,7 @@ parameters that can be adjusted.
 
 For (unsafe) access directly to the C interface, see "Crypto.Argon2.FFI".
 
+@since 1.3.0.0
 -}
 module Crypto.Argon2
     ( -- * Hash computation & verification
