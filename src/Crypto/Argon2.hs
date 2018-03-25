@@ -282,15 +282,7 @@ hashEncoded' :: HashOptions
              -> BS.ByteString
              -> BS.ByteString
              -> IO TS.ShortText
-hashEncoded' HashOptions{..} password salt = do
-    outLen <- FFI.argon2_encodedlen
-                  hashIterations
-                  hashMemory
-                  hashParallelism
-                  saltLen
-                  hashLength
-                  (toArgon2Type hashVariant)
-
+hashEncoded' HashOptions{..} password salt =
     allocaBytes (fromIntegral outLen) $ \out -> do
         res <- BS.useAsCString password $ \password' ->
                BS.useAsCString salt $ \salt' ->
@@ -316,6 +308,14 @@ hashEncoded' HashOptions{..} password salt = do
           Just t  -> evaluate t
 
   where
+    !outLen = FFI.argon2_encodedlen
+                    hashIterations
+                    hashMemory
+                    hashParallelism
+                    saltLen
+                    hashLength
+                    (toArgon2Type hashVariant)
+
     saltLen     = fromIntegral (BS.length salt)
     passwordLen = fromIntegral (BS.length password)
 

@@ -111,7 +111,7 @@ foreign import ccall unsafe
     "argon2.h hs_argon2__argon2_encodedlen"
 #endif
     argon2_encodedlen
-    :: Word32 -> Word32 -> Word32 -> Word32 -> Word32 -> Argon2_type -> IO CSize
+    :: Word32 -> Word32 -> Word32 -> Word32 -> Word32 -> Argon2_type -> CSize
 
 -- * @libargon2@ API typedefs
 
