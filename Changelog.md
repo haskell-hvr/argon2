@@ -10,6 +10,10 @@
 
 - Defaults in `defaultHashOptions` changed to the current ones from the upstream `argon2` executable.
 
+- Replace `Argon2Exception` by more direct `Argon2Status` enumeration; report failures purely via `Either` rather than by throwing as exceptions.
+
+- Rename `verify` to `verifyEncoded` and return more informative `Argon2Status` result instead of `Bool`.
+
 - Embedded `phc-winner-argon2` version updated to release `20171227`.
 
 - Mangle names of global symbols from `phc-winner-argon2` to reduce risk of symbol clashes at the C ABI level.
