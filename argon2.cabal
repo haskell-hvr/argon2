@@ -72,7 +72,7 @@ library
 
   if flag(use-system-library)
     cpp-options: -DUSE_SYSTEM_ARGON2=1
-    pkgconfig-depends: argon2
+    pkgconfig-depends: libargon2
   else
     cpp-options: -DUSE_SYSTEM_ARGON2=0
     c-sources: phc-winner-argon2/src/argon2.c
