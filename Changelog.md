@@ -1,3 +1,9 @@
+### 1.3.0.1
+
+- Fix `pkgconfig-depends` decleration for @use-system-library@
+  configuration; also add new `pkg-config` flag for falling back
+  to non-`pkg-config`-based FFI library linkage.
+
 # 1.3.0.0
 
 - This represents a major rewrite/refactoring of this package.
