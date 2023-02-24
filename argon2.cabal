@@ -66,8 +66,8 @@ library
   exposed-modules:     Crypto.Argon2.FFI
                        Crypto.Argon2
 
-  build-depends:       base         >= 4.8   && < 4.12
-                     , bytestring   == 0.10.*
+  build-depends:       base         >= 4.8   && < 5
+                     , bytestring   >= 0.10
                      , deepseq      == 1.4.*
                      , text-short   >= 0.1.2 && < 0.2
 
