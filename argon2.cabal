@@ -67,7 +67,7 @@ library
                        Crypto.Argon2
 
   build-depends:       base         >= 4.8   && < 5
-                     , bytestring   == 0.10.*
+                     , bytestring   >= 0.10
                      , deepseq      == 1.4.*
                      , text-short   >= 0.1.2 && < 0.2
 
