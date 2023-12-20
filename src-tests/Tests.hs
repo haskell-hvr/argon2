@@ -5,6 +5,7 @@ import qualified Crypto.Argon2.FFI     as FFI
 import           Data.Bits             (shiftL)
 import qualified Data.ByteString       as BS
 import           Data.Ix
+import           Data.Word             (Word32)
 import           Test.QuickCheck
 import           Test.Tasty
 import           Test.Tasty.HUnit
@@ -19,14 +20,15 @@ arbitraryVersion = arbitraryBoundedEnum
 arbitraryHashOptions :: Gen HashOptions
 arbitraryHashOptions =
   do p <- arbitraryWithin 1 4
-     HashOptions <$> arbitraryWithin FFI.ARGON2_MIN_TIME (min FFI.ARGON2_MAX_TIME 65536)
+     HashOptions <$> arbitraryWithin FFI.ARGON2_MIN_TIME (min FFI.ARGON2_MAX_TIME (2 ^ 13))
                  <*> arbitraryWithin (FFI.ARGON2_MIN_MEMORY*p) (FFI.ARGON2_MIN_MEMORY*p*4)  -- arbitraryWithin (max (max FFI.ARGON2_MIN_MEMORY (8 * p)) (shiftL p 3)) (min FFI.ARGON2_MAX_MEMORY 512)
                  <*> pure p
                  <*> arbitraryVariant
                  <*> arbitraryVersion
                  <*> arbitraryWithin FFI.ARGON2_MIN_OUTLEN (min FFI.ARGON2_MAX_OUTLEN 65536)
-
-arbitraryWithin lower upper = arbitrary `suchThat` (inRange (lower,upper))
+  where
+    arbitraryWithin :: Word32 -> Word32 -> Gen Word32
+    arbitraryWithin = curry chooseEnum
 
 arbitraryBytes :: Gen BS.ByteString
 arbitraryBytes = BS.pack <$> arbitrary
