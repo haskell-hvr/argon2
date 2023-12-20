@@ -66,9 +66,9 @@ library
   exposed-modules:     Crypto.Argon2.FFI
                        Crypto.Argon2
 
-  build-depends:       base         >= 4.8   && < 4.12
-                     , bytestring   == 0.10.*
-                     , deepseq      == 1.4.*
+  build-depends:       base         >= 4.8   && < 4.20
+                     , bytestring   >= 0.10  && < 0.13
+                     , deepseq      >= 1.4   && < 1.6
                      , text-short   >= 0.1.2 && < 0.2
 
   hs-source-dirs:      src
@@ -110,9 +110,9 @@ test-suite tests
                , base
                , bytestring
 
-               , QuickCheck       == 2.11.*
+               , QuickCheck       >= 2.11 && < 2.15
                , tasty-quickcheck == 0.10.*
                , tasty-hunit      == 0.10.*
-               , tasty            == 1.0.*
+               , tasty            >= 1.0 && < 1.6
 
   ghc-options: -threaded
